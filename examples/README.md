@@ -12,7 +12,7 @@ has step-by-step cells you run top to bottom.
 
 > **Before you run:**
 > - Set **Runtime ▸ Change runtime type ▸ T4 GPU**.
-> - The **first cell installs Python 3.10 via condacolab and auto-restarts the
->   kernel** — this is expected. Wait for the reconnect, then continue from the
->   next cell (Coqui `TTS` needs Python < 3.12, but Colab defaults to 3.12).
+> - The notebooks install the maintained **`coqui-tts`** fork for the XTTS engine
+>   (the original `TTS` won't install on Colab's current Python). **No kernel
+>   restart is needed** — just run the cells top to bottom.
 > - The first model load downloads the checkpoint (~2 GB) from HuggingFace.
