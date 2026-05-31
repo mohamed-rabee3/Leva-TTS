@@ -30,7 +30,15 @@ from typing import List, Optional
 # Default CSV path
 from leva_tts.text.normalizer import normalize_entities, int_to_levantine, float_to_levantine
 
-_DEFAULT_LEXICON_CSV = Path(__file__).parents[2] / "data" / "levantine_lexicon.csv"
+def _find_lexicon() -> Path:
+    """Locate the Levantine lexicon CSV: bundled-in-package first, then repo-root."""
+    bundled = Path(__file__).with_name("levantine_lexicon.csv")
+    if bundled.exists():
+        return bundled
+    return Path(__file__).parents[2] / "data" / "levantine_lexicon.csv"
+
+
+_DEFAULT_LEXICON_CSV = _find_lexicon()
 
 # ── Arabic helpers ────────────────────────────────────────────────────────────
 _HARAKAT = re.compile(r"[ً-ٰٟ]")

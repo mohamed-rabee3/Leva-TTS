@@ -13,6 +13,12 @@
 ![Pipecat](https://img.shields.io/badge/Agent-Pipecat-5A45FF)
 ![License](https://img.shields.io/badge/License-Apache--2.0-blue)
 
+[![Demo](https://img.shields.io/badge/🔊_Live_Demo-Listen-2ea043)](https://mohammedaly22.github.io/Leva-TTS/)
+[![HF Model](https://img.shields.io/badge/🤗_Model-Leva--TTS-FFD21E)](https://huggingface.co/mohammedaly22/leva-tts)
+[![HF Space](https://img.shields.io/badge/🤗_Space-Gradio_Demo-FFD21E)](https://huggingface.co/spaces/mohammedaly22/leva-tts)
+[![PyPI](https://img.shields.io/pypi/v/leva-tts?color=3775A9&logo=pypi&logoColor=white)](https://pypi.org/project/leva-tts/)
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/MohammedAly22/Leva-TTS/blob/main/examples/01_quick_start.ipynb)
+
 | 🎯 KPI | Target | **Measured** | Status |
 |---|---|---|---|
 | Peak VRAM (inference) | ≤ 3 GB | **2.13 GB** | ✅ |
@@ -105,6 +111,21 @@ Measured on a single **NVIDIA H100** (fp16) over a 15-sentence held-out set
 | The project deadline is next Friday. | Mohamed (M) | [▶](sample_wavs/xtts_base/mohamed_en.wav) | [▶](sample_wavs/lahgtna/mohamed_en.wav) | [▶](sample_wavs/leva_tts/mohamed_en.wav) |
 
 > 📝 Generate your own: `python scripts/inference.py --text "your text"`
+
+---
+
+## ⚡ Try it on Colab (zero setup)
+
+Run everything on a **free Colab T4 GPU** — no local install:
+
+| Notebook | Description | |
+|----------|-------------|--|
+| **Quick Start** | Synthesize, zero-shot clone, stream | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/MohammedAly22/Leva-TTS/blob/main/examples/01_quick_start.ipynb) |
+| **Inference Server** | FastAPI streaming server + requests | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/MohammedAly22/Leva-TTS/blob/main/examples/02_inference_server.ipynb) |
+| **Evaluation** | RTF / TTFA / CER / WER / UTMOS on T4 | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/MohammedAly22/Leva-TTS/blob/main/examples/03_evaluation.ipynb) |
+| **Gradio App** | Full web demo with a public link | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/MohammedAly22/Leva-TTS/blob/main/examples/04_gradio_app.ipynb) |
+
+See [`examples/`](examples/) for details.
 
 ---
 
@@ -545,13 +566,21 @@ leva-tts/
 
 ---
 
+## 📄 License
+
+- **Code** (this repository and the `leva-tts` package): **Apache-2.0** — see [`LICENSE`](LICENSE).
+- **Model weights** (`mohammedaly22/leva-tts` on HuggingFace): the fine-tuned
+  XTTS-v2 weights inherit **Coqui's non-commercial license (CPML)** from the
+  [base model](https://huggingface.co/coqui/XTTS-v2) and are for **research /
+  non-commercial** use.
+
 ## 📜 Citation
 
 ```bibtex
-@misc{leva-tts-2025,
+@misc{leva-tts-2026,
   title   = {Leva-TTS: Levantine Arabic / English Code-Switching TTS},
   author  = {Mohammed Aly},
-  year    = {2025},
+  year    = {2026},
   url     = {https://huggingface.co/mohammedaly22},
 }
 ```

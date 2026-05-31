@@ -1,21 +1,22 @@
 [build-system]
 requires = ["setuptools>=68", "wheel"]
-build-backend = "setuptools.backends.legacy:build"
+build-backend = "setuptools.build_meta"
 
 [project]
 name            = "leva-tts"
 version         = "0.1.0"
-description     = "Low-latency Levantine Arabic / English code-switching TTS"
+description     = "Low-latency Levantine Arabic / English code-switching TTS (fine-tuned XTTS-v2)"
 readme          = "README.md"
-license         = {text = "MIT"}
-requires-python = ">=3.11"
+license         = "Apache-2.0"
+license-files   = ["LICENSE"]
+requires-python = ">=3.10"
 authors         = [{name = "Mohammed Aly", email = "mae678900@gmail.com"}]
-keywords        = ["tts", "arabic", "levantine", "code-switching", "speech-synthesis"]
+keywords        = ["tts", "arabic", "levantine", "code-switching", "speech-synthesis", "xtts"]
 classifiers     = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Topic :: Multimedia :: Sound/Audio :: Speech",
-    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
 ]
 
@@ -32,13 +33,14 @@ dependencies = [
     "requests>=2.32",
     "tqdm>=4.66",
     "pyyaml>=6.0",
-    "sympy",                 # required by torch.fx symbolic shapes
+    "pandas>=1.5.3",
+    "sympy",
     "transformers>=4.41,<4.42",
 ]
 
 [project.optional-dependencies]
 server   = ["fastapi>=0.111", "uvicorn[standard]>=0.30", "websockets>=11"]
-pipecat  = ["pipecat-ai>=0.0.48", "openai"]
+pipecat  = ["pipecat-ai>=0.0.48", "openai", "ormsgpack"]
 gradio   = ["gradio>=4.37"]
 all      = ["leva-tts[server,pipecat,gradio]"]
 
@@ -47,8 +49,10 @@ leva-tts         = "leva_tts.cli:main"
 leva-tts-server  = "leva_tts.server.app:cli_main"
 
 [project.urls]
-Homepage    = "https://github.com/mohammedaly22/leva-tts"
-HuggingFace = "https://huggingface.co/mohammedaly22"
+Homepage    = "https://github.com/MohammedAly22/Leva-TTS"
+Demo        = "https://mohammedaly22.github.io/Leva-TTS/"
+Model       = "https://huggingface.co/mohammedaly22/leva-tts"
+Space       = "https://huggingface.co/spaces/mohammedaly22/leva-tts"
 Dataset     = "https://huggingface.co/datasets/mohammedaly22/lahgtna-levantine-tts"
 
 [tool.setuptools.packages.find]
@@ -56,4 +60,4 @@ where   = ["."]
 include = ["leva_tts*"]
 
 [tool.setuptools.package-data]
-leva_tts = ["py.typed"]
+leva_tts = ["py.typed", "text/*.csv"]
