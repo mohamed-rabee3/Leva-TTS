@@ -70,42 +70,6 @@ Measured on a single **NVIDIA H100** (fp16) over a 15-sentence held-out set
 ## 🎵 Audio Samples
 
 > ### 🔊 **[▶ Open the interactive demo page →](https://mohammedaly22.github.io/Leva-TTS/)**
-> Embedded audio players don't run inside GitHub Markdown, so the comparisons
-> live on a **GitHub Pages demo** with real, playable `<audio>` players.
-> The tables below link to each clip (click ▶ to play). Progression:
-> **Base XTTS-v2 → Lahgtna v2 → Leva-TTS**.
-
-### Model Comparison
-
-| Text | Speaker | Base XTTS-v2 | Lahgtna v2 | **🟢 Leva-TTS** |
-|------|---------|--------------|------------|--------------|
-| كيفك اليوم؟ إنت شو عم تعمل؟ | Mohamed (M) | [▶](sample_wavs/compare_base.wav) | [▶](sample_wavs/compare_lahgtna.wav) | [▶](sample_wavs/leva_tts/mohamed_ar.wav) |
-| شو رأيك نعمل brainstorming session قبل الـ meeting؟ | Mohamed (M) | [▶](sample_wavs/compare_cs_base.wav) | [▶](sample_wavs/compare_cs_lahgtna.wav) | [▶](sample_wavs/leva_tts/mohamed_cs.wav) |
-
-### 🔀 Code-Switching (Levantine + English)
-
-| Text | Speaker | Base XTTS-v2 | Lahgtna v2 | **🟢 Leva-TTS** |
-|------|---------|--------------|------------|--------------|
-| هَلَّق أنا عم أشتغل على the new project. | Badr (M) | [▶](sample_wavs/xtts_base/badr_cs.wav) | [▶](sample_wavs/lahgtna/badr_cs.wav) | [▶](sample_wavs/leva_tts/badr_cs.wav) |
-| والله the weather today كتير حلو. | Fatma (F) | [▶](sample_wavs/xtts_base/fatma_cs.wav) | [▶](sample_wavs/lahgtna/fatma_cs.wav) | [▶](sample_wavs/leva_tts/fatma_cs.wav) |
-| بِدِّي أحكيلك عن the meeting المهم اليوم. | Mona (F) | [▶](sample_wavs/xtts_base/mona_cs.wav) | [▶](sample_wavs/lahgtna/mona_cs.wav) | [▶](sample_wavs/leva_tts/mona_cs.wav) |
-
-### 🗣️ Pure Levantine Arabic
-
-| Text | Speaker | Base XTTS-v2 | Lahgtna v2 | **🟢 Leva-TTS** |
-|------|---------|--------------|------------|--------------|
-| كيفك اليوم؟ إنت شو عم تعمل هَلَّق؟ | Badr (M) | [▶](sample_wavs/xtts_base/badr_ar.wav) | [▶](sample_wavs/lahgtna/badr_ar.wav) | [▶](sample_wavs/leva_tts/badr_ar.wav) |
-| هَلَّق رح أروح على البيت وبكرا برجع. | Amina (F) | [▶](sample_wavs/xtts_base/amina_ar.wav) | [▶](sample_wavs/lahgtna/amina_ar.wav) | [▶](sample_wavs/leva_tts/amina_ar.wav) |
-| شو رأيك نطلع نتمشى شوي بعد الشغل؟ | Rami (M) | [▶](sample_wavs/xtts_base/rami_ar.wav) | [▶](sample_wavs/lahgtna/rami_ar.wav) | [▶](sample_wavs/leva_tts/rami_ar.wav) |
-
-### 🇬🇧 Pure English
-
-| Text | Speaker | Base XTTS-v2 | Lahgtna v2 | **🟢 Leva-TTS** |
-|------|---------|--------------|------------|--------------|
-| Hello, how are you doing today? | Lamyaa (F) | [▶](sample_wavs/xtts_base/lamyaa_en.wav) | [▶](sample_wavs/lahgtna/lamyaa_en.wav) | [▶](sample_wavs/leva_tts/lamyaa_en.wav) |
-| The project deadline is next Friday. | Mohamed (M) | [▶](sample_wavs/xtts_base/mohamed_en.wav) | [▶](sample_wavs/lahgtna/mohamed_en.wav) | [▶](sample_wavs/leva_tts/mohamed_en.wav) |
-
-> 📝 Generate your own: `python scripts/inference.py --text "your text"`
 
 ---
 
