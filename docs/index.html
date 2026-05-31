@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Leva-TTS — Audio Sample Comparison</title>
+<meta name="description" content="Levantine Arabic / English code-switching TTS — listen to Base XTTS-v2 vs Lahgtna v2 vs Leva-TTS.">
+<style>
+  :root {
+    --bg:#0d1117; --card:#161b22; --border:#30363d; --fg:#e6edf3;
+    --muted:#8b949e; --accent:#2ea043; --accent2:#58a6ff;
+  }
+  * { box-sizing:border-box; }
+  body {
+    margin:0; background:var(--bg); color:var(--fg);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+    line-height:1.5;
+  }
+  .wrap { max-width:920px; margin:0 auto; padding:40px 20px 80px; }
+  header { text-align:center; margin-bottom:36px; }
+  h1 { font-size:2.2rem; margin:0 0 8px; }
+  .tag { color:var(--accent2); font-weight:600; }
+  .sub { color:var(--muted); max-width:640px; margin:0 auto; }
+  .links { margin-top:18px; }
+  .links a {
+    display:inline-block; margin:4px 6px; padding:8px 16px; border-radius:8px;
+    border:1px solid var(--border); color:var(--fg); text-decoration:none;
+    background:var(--card); font-size:.92rem; transition:.15s;
+  }
+  .links a:hover { border-color:var(--accent2); color:var(--accent2); }
+  .legend {
+    background:var(--card); border:1px solid var(--border); border-radius:10px;
+    padding:14px 18px; margin:0 0 28px; color:var(--muted); font-size:.9rem;
+  }
+  .legend b { color:var(--accent); }
+  h2.section {
+    font-size:1.25rem; margin:34px 0 14px; padding-bottom:8px;
+    border-bottom:1px solid var(--border);
+  }
+  .card {
+    background:var(--card); border:1px solid var(--border); border-radius:12px;
+    padding:18px 20px; margin-bottom:16px;
+  }
+  .text { font-size:1.12rem; margin-bottom:2px; }
+  .spk { color:var(--muted); font-size:.85rem; margin-bottom:14px; }
+  .players { display:grid; grid-template-columns:1fr; gap:12px; }
+  @media (min-width:680px) { .players { grid-template-columns:1fr 1fr 1fr; } }
+  .model {
+    background:#0d1117; border:1px solid var(--border); border-radius:9px;
+    padding:10px 12px;
+  }
+  .model.leva { border-color:var(--accent); box-shadow:0 0 0 1px rgba(46,160,67,.3); }
+  .mlabel { display:block; font-size:.78rem; color:var(--muted); margin-bottom:7px; font-weight:600; }
+  .model.leva .mlabel { color:var(--accent); }
+  audio { width:100%; height:34px; }
+  footer { text-align:center; color:var(--muted); margin-top:50px; font-size:.85rem; }
+  footer a { color:var(--accent2); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>🎙️ Leva-TTS</h1>
+    <p class="sub"><span class="tag">Low-latency code-switching TTS</span> — Levantine Arabic ⇄ English.
+       Listen to the same sentences across three models.</p>
+    <div class="links">
+      <a href="https://github.com/MohammedAly22/Leva-TTS">⭐ GitHub</a>
+      <a href="https://huggingface.co/mohammedaly22/leva-tts">🤗 HuggingFace</a>
+    </div>
+  </header>
+
+  <div class="legend">
+    Progression: <b>Base XTTS-v2</b> → <b>Lahgtna v2</b> (Levantine fine-tune) →
+    <b style="color:var(--accent)">🟢 Leva-TTS</b> (this model). The green-bordered
+    player is our model. Audio loads on play.
+  </div>
+
+    <h2 class="section">🔀 Code-Switching (Levantine + English)</h2>
+    <div class="card">
+      <div class="text" dir="rtl">هَلَّق أنا عم أشتغل على the new project اللي حكيتلك عنه.</div>
+      <div class="spk">Badr (M)</div>
+      <div class="players">
+        <div class="model">
+          <span class="mlabel">Base XTTS-v2</span>
+          <audio controls preload="none" src="https://raw.githubusercontent.com/MohammedAly22/Leva-TTS/main/sample_wavs/xtts_base/badr_cs.wav"></audio>
+        </div>
+        <div class="model">
+          <span class="mlabel">Lahgtna v2</span>
+          <audio controls preload="none" src="https://raw.githubusercontent.com/MohammedAly22/Leva-TTS/main/sample_wavs/lahgtna/badr_cs.wav"></audio>
+        </div>
+        <div class="model leva">
+          <span class="mlabel">Leva-TTS</span>
+          <audio controls preload="none" src="https://raw.githubusercontent.com/MohammedAly22/Leva-TTS/main/sample_wavs/leva_tts/badr_cs.wav"></audio>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="text" dir="rtl">والله the weather today كتير حلو، بِدِّي أطلع برا.</div>
+      <div class="spk">Fatma (F)</div>
+      <div class="players">
+        <div class="model">
+          <span class="mlabel">Base XTTS-v2</span>
+          <audio controls preload="none" src="https://raw.githubusercontent.com/MohammedAly22/Leva-TTS/main/sample_wavs/xtts_base/fatma_cs.wav"></audio>
+        </div>
+        <div class="model">
+          <span class="mlabel">Lahgtna v2</span>
+          <audio controls preload="none" src="https://raw.githubusercontent.com/MohammedAly22/Leva-TTS/main/sample_wavs/lahgtna/fatma_cs.wav"></audio>
+        </div>
+        <div class="model leva">
+          <span class="mlabel">Leva-TTS</span>
+          <audio controls preload="none" src="https://raw.githubusercontent.com/MohammedAly22/Leva-TTS/main/sample_wavs/leva_tts/fatma_cs.wav"></audio>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="text" dir="rtl">بِدِّي أحكيلك عن the meeting اللي كان مهم كتير اليوم.</div>
+      <div class="spk">Mona (F)</div>
+      <div class="players">
+        <div class="model">
+          <span class="mlabel">Base XTTS-v2</span>
+          <audio controls preload="none" src="https://raw.githubusercontent.com/MohammedAly22/Leva-TTS/main/sample_wavs/xtts_base/mona_cs.wav"></audio>
+        </div>
+        <div class="model">
+          <span class="mlabel">Lahgtna v2</span>
+          <audio controls preload="none" src="https://raw.githubusercontent.com/MohammedAly22/Leva-TTS/main/sample_wavs/lahgtna/mona_cs.wav"></audio>
+        </div>
+        <div class="model leva">
+          <span class="mlabel">Leva-TTS</span>
+          <audio controls preload="none" src="https://raw.githubusercontent.com/MohammedAly22/Leva-TTS/main/sample_wavs/leva_tts/mona_cs.wav"></audio>
+        </div>
+      </div>
+    </div>
+    <h2 class="section">🗣️ Pure Levantine Arabic</h2>
+    <div class="card">
+      <div class="text" dir="rtl">كيفك اليوم؟ إنت شو عم تعمل هَلَّق؟</div>
+      <div class="spk">Badr (M)</div>
+      <div class="players">
+        <div class="model">
+          <span class="mlabel">Base XTTS-v2</span>
+          <audio controls preload="none" src="https://raw.githubusercontent.com/MohammedAly22/Leva-TTS/main/sample_wavs/xtts_base/badr_ar.wav"></audio>
+        </div>
+        <div class="model">
+          <span class="mlabel">Lahgtna v2</span>
+          <audio controls preload="none" src="https://raw.githubusercontent.com/MohammedAly22/Leva-TTS/main/sample_wavs/lahgtna/badr_ar.wav"></audio>
+        </div>
+        <div class="model leva">
+          <span class="mlabel">Leva-TTS</span>
+          <audio controls preload="none" src="https://raw.githubusercontent.com/MohammedAly22/Leva-TTS/main/sample_wavs/leva_tts/badr_ar.wav"></audio>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="text" dir="rtl">هَلَّق رح أروح على البيت وبكرا برجع.</div>
+      <div class="spk">Amina (F)</div>
+      <div class="players">
+        <div class="model">
+          <span class="mlabel">Base XTTS-v2</span>
+          <audio controls preload="none" src="https://raw.githubusercontent.com/MohammedAly22/Leva-TTS/main/sample_wavs/xtts_base/amina_ar.wav"></audio>
+        </div>
+        <div class="model">
+          <span class="mlabel">Lahgtna v2</span>
+          <audio controls preload="none" src="https://raw.githubusercontent.com/MohammedAly22/Leva-TTS/main/sample_wavs/lahgtna/amina_ar.wav"></audio>
+        </div>
+        <div class="model leva">
+          <span class="mlabel">Leva-TTS</span>
+          <audio controls preload="none" src="https://raw.githubusercontent.com/MohammedAly22/Leva-TTS/main/sample_wavs/leva_tts/amina_ar.wav"></audio>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="text" dir="rtl">شو رأيك نطلع نتمشى شوي بعد الشغل إذا الجو كان منيح؟</div>
+      <div class="spk">Rami (M)</div>
+      <div class="players">
+        <div class="model">
+          <span class="mlabel">Base XTTS-v2</span>
+          <audio controls preload="none" src="https://raw.githubusercontent.com/MohammedAly22/Leva-TTS/main/sample_wavs/xtts_base/rami_ar.wav"></audio>
+        </div>
+        <div class="model">
+          <span class="mlabel">Lahgtna v2</span>
+          <audio controls preload="none" src="https://raw.githubusercontent.com/MohammedAly22/Leva-TTS/main/sample_wavs/lahgtna/rami_ar.wav"></audio>
+        </div>
+        <div class="model leva">
+          <span class="mlabel">Leva-TTS</span>
+          <audio controls preload="none" src="https://raw.githubusercontent.com/MohammedAly22/Leva-TTS/main/sample_wavs/leva_tts/rami_ar.wav"></audio>
+        </div>
+      </div>
+    </div>
+    <h2 class="section">🇬🇧 Pure English</h2>
+    <div class="card">
+      <div class="text">Hello, how are you doing today?</div>
+      <div class="spk">Lamyaa (F)</div>
+      <div class="players">
+        <div class="model">
+          <span class="mlabel">Base XTTS-v2</span>
+          <audio controls preload="none" src="https://raw.githubusercontent.com/MohammedAly22/Leva-TTS/main/sample_wavs/xtts_base/lamyaa_en.wav"></audio>
+        </div>
+        <div class="model">
+          <span class="mlabel">Lahgtna v2</span>
+          <audio controls preload="none" src="https://raw.githubusercontent.com/MohammedAly22/Leva-TTS/main/sample_wavs/lahgtna/lamyaa_en.wav"></audio>
+        </div>
+        <div class="model leva">
+          <span class="mlabel">Leva-TTS</span>
+          <audio controls preload="none" src="https://raw.githubusercontent.com/MohammedAly22/Leva-TTS/main/sample_wavs/leva_tts/lamyaa_en.wav"></audio>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="text">The project deadline is next Friday.</div>
+      <div class="spk">Mohamed (M)</div>
+      <div class="players">
+        <div class="model">
+          <span class="mlabel">Base XTTS-v2</span>
+          <audio controls preload="none" src="https://raw.githubusercontent.com/MohammedAly22/Leva-TTS/main/sample_wavs/xtts_base/mohamed_en.wav"></audio>
+        </div>
+        <div class="model">
+          <span class="mlabel">Lahgtna v2</span>
+          <audio controls preload="none" src="https://raw.githubusercontent.com/MohammedAly22/Leva-TTS/main/sample_wavs/lahgtna/mohamed_en.wav"></audio>
+        </div>
+        <div class="model leva">
+          <span class="mlabel">Leva-TTS</span>
+          <audio controls preload="none" src="https://raw.githubusercontent.com/MohammedAly22/Leva-TTS/main/sample_wavs/leva_tts/mohamed_en.wav"></audio>
+        </div>
+      </div>
+    </div>
+
+  <footer>
+    Generate your own: <code>python scripts/inference.py --text "your text"</code><br>
+    Built on <a href="https://huggingface.co/coqui/XTTS-v2">XTTS-v2</a> ·
+    <a href="https://huggingface.co/oddadmix/lahgtna-omnivoice-v2">Lahgtna-OmniVoice v2</a>
+  </footer>
+</div>
+</body>
+</html>
