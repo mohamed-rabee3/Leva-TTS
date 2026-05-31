@@ -150,9 +150,11 @@ async def stream_ws(ws: WebSocket):
                 ttfa_ms = (time.perf_counter() - t0) * 1000
                 _TTFA_HISTORY.append(ttfa_ms)
                 first = False
-            arr = chunk.astype(np.float32)
-            total_dur += len(arr) / _ENGINE.sample_rate
-            await ws.send_bytes(arr.tobytes())
+            # Stream int16 PCM (matches POST /synthesize and the client decoders)
+            f32 = chunk.astype(np.float32)
+            total_dur += len(f32) / _ENGINE.sample_rate
+            pcm16 = np.clip(f32 * 32767.0, -32768, 32767).astype(np.int16)
+            await ws.send_bytes(pcm16.tobytes())
 
         wall = time.perf_counter() - t0
         rtf  = wall / (total_dur + 1e-9)

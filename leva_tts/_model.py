@@ -65,12 +65,13 @@ def load(checkpoint_dir: str = "checkpoints", device: str = "cuda"):
 
     cache = Path(os.environ.get(
         "COQUI_MODEL_PATH", Path.home() / ".local/share/tts"))
-    xtts  = cache / "tts_models--multilingual--multi-dataset--xtts_v2"
 
     try:
         from TTS.tts.configs.xtts_config import XttsConfig
         from TTS.tts.models.xtts import Xtts
+        from leva_tts.inference.engine import ensure_base_xtts
 
+        xtts = ensure_base_xtts(cache)   # download base XTTS-v2 if missing
         cfg = XttsConfig()
         cfg.load_json(str(xtts / "config.json"))
 

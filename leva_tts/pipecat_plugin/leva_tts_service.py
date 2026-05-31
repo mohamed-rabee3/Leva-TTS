@@ -209,8 +209,8 @@ class LevaTTSService(TTSService):
             }))
             async for msg in ws:
                 if isinstance(msg, bytes):
-                    arr = np.frombuffer(msg, dtype=np.float32)
-                    pcm = (arr * 32767).astype(np.int16)
+                    # Server streams int16 PCM
+                    pcm = np.frombuffer(msg, dtype=np.int16)
                     yield pcm
                 elif isinstance(msg, str):
                     data = json.loads(msg)

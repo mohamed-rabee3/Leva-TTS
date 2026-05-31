@@ -23,7 +23,7 @@ Pip-install inference quick start
     for chunk in tts.zero_shot_stream("...", "my_voice.wav"):
         ...
 """
-__version__ = "0.1.2"
+__version__ = "0.1.3"
 __author__  = "Mohammed Aly"
 
 import os

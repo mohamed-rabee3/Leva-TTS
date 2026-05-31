@@ -86,6 +86,52 @@ def _split_text(text: str, max_chars: int = 180) -> List[str]:
     return [ch for ch in chunks if ch.strip()]
 
 
+def ensure_base_xtts(cache=None) -> Path:
+    """
+    Return the base XTTS-v2 model directory, downloading it from Coqui on first
+    use. Leva-TTS fine-tunes only the GPT, so the base XTTS-v2 (config, vocab,
+    speaker encoder, HiFi-GAN) must be present locally. Shared by the engine,
+    the Gradio model singleton, and the evaluation script.
+    """
+    if cache is None:
+        cache = Path(os.environ.get("COQUI_MODEL_PATH",
+                                    Path.home() / ".local/share/tts"))
+    cache = Path(cache)
+    model_dir = "tts_models--multilingual--multi-dataset--xtts_v2"
+    try:
+        from TTS.utils.generic_utils import get_user_data_dir
+        coqui_default = Path(get_user_data_dir("tts"))
+    except Exception:
+        coqui_default = Path.home() / ".local/share/tts"
+
+    for base in (cache, coqui_default):
+        d = base / model_dir
+        if (d / "config.json").exists():
+            return d
+
+    os.environ.setdefault("COQUI_TOS_AGREED", "1")
+    logger.info("Downloading base XTTS-v2 model (one-time, ~1.8 GB) ...")
+    from TTS.utils.manage import ModelManager
+    out = ModelManager().download_model(
+        "tts_models/multilingual/multi-dataset/xtts_v2")
+    if isinstance(out, (list, tuple)):
+        for cand in out:
+            if not cand:
+                continue
+            cp = Path(cand)
+            d = cp if cp.is_dir() else cp.parent
+            if (d / "config.json").exists():
+                return d
+    for base in (coqui_default, cache):
+        d = base / model_dir
+        if (d / "config.json").exists():
+            return d
+    raise FileNotFoundError(
+        "Could not download the base XTTS-v2 model from Coqui. "
+        "Set COQUI_TOS_AGREED=1 and check your internet connection."
+    )
+
+
 class LevaTTSEngine:
     """Streaming / batch XTTS-v2 inference engine for Leva-TTS."""
 
@@ -115,50 +161,8 @@ class LevaTTSEngine:
     # ── Factory constructors ──────────────────────────────────────────────────
     @staticmethod
     def _ensure_base_xtts(cache: Path) -> Path:
-        """
-        Return the base XTTS-v2 model directory, downloading it from Coqui on
-        first use. Leva-TTS fine-tunes only the GPT, so the base XTTS-v2
-        (config, vocab, speaker encoder, HiFi-GAN) must be present locally.
-        """
-        model_dir = "tts_models--multilingual--multi-dataset--xtts_v2"
-        # Coqui's default user-data dir (where ModelManager() downloads to).
-        try:
-            from TTS.utils.generic_utils import get_user_data_dir
-            coqui_default = Path(get_user_data_dir("tts"))
-        except Exception:
-            coqui_default = Path.home() / ".local/share/tts"
-
-        # Already downloaded? (check the configured cache and Coqui's default)
-        for base in (cache, coqui_default):
-            d = base / model_dir
-            if (d / "config.json").exists():
-                return d
-
-        # Auto-accept the Coqui Public Model License (non-interactive) and download.
-        os.environ.setdefault("COQUI_TOS_AGREED", "1")
-        logger.info("Downloading base XTTS-v2 model (one-time, ~1.8 GB) ...")
-        from TTS.utils.manage import ModelManager
-        out = ModelManager().download_model(
-            "tts_models/multilingual/multi-dataset/xtts_v2")
-        # download_model returns (model_path, config_path, item); return the dir
-        # that actually contains config.json.
-        if isinstance(out, (list, tuple)):
-            for cand in out:
-                if not cand:
-                    continue
-                cp = Path(cand)
-                d = cp if cp.is_dir() else cp.parent
-                if (d / "config.json").exists():
-                    return d
-        for base in (coqui_default, cache):
-            d = base / model_dir
-            if (d / "config.json").exists():
-                return d
-        raise FileNotFoundError(
-            "Could not download the base XTTS-v2 model from Coqui. "
-            "Set COQUI_TOS_AGREED=1 and check your internet connection."
-        )
-
+        """Backward-compatible wrapper around :func:`ensure_base_xtts`."""
+        return ensure_base_xtts(cache)
     @classmethod
     def from_checkpoint(
         cls,

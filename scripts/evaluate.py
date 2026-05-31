@@ -120,9 +120,10 @@ def load_model_and_conditioning(checkpoint, ref_wav, device, optimize=False):
     import os
     cache_dir = Path(os.environ.get("COQUI_MODEL_PATH",
                                     Path.home() / ".local/share/tts"))
-    xtts_dir  = cache_dir / "tts_models--multilingual--multi-dataset--xtts_v2"
     from TTS.tts.configs.xtts_config import XttsConfig
     from TTS.tts.models.xtts import Xtts
+    from leva_tts.inference.engine import ensure_base_xtts
+    xtts_dir = ensure_base_xtts(cache_dir)   # download base XTTS-v2 if missing
     config = XttsConfig()
     config.load_json(str(xtts_dir / "config.json"))
     model = Xtts.init_from_config(config)
@@ -133,7 +134,7 @@ def load_model_and_conditioning(checkpoint, ref_wav, device, optimize=False):
     if not pths:
         pths = sorted(P(checkpoint).rglob("*.pth"), key=lambda f: f.stat().st_mtime)
     if pths:
-        state = torch.load(str(pths[-1]), map_location="cpu")
+        state = torch.load(str(pths[-1]), map_location="cpu", weights_only=False)
         state = state.get("model", state)
         cleaned = {k[len("xtts.gpt."):] if k.startswith("xtts.gpt.")
                    else k[len("gpt."):] if k.startswith("gpt.") else k: v
