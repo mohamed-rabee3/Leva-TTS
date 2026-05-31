@@ -10,5 +10,9 @@ has step-by-step cells you run top to bottom.
 | **03 · Evaluation** | Reproduce RTF / TTFA / VRAM / CER / WER / UTMOS on a T4 | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/MohammedAly22/Leva-TTS/blob/main/examples/03_evaluation.ipynb) |
 | **04 · Gradio App** | Launch the full web demo with a public share link | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/MohammedAly22/Leva-TTS/blob/main/examples/04_gradio_app.ipynb) |
 
-> **Tip:** set **Runtime ▸ Change runtime type ▸ T4 GPU** before running.
-> The first model load downloads the checkpoint (~2 GB) from HuggingFace.
+> **Before you run:**
+> - Set **Runtime ▸ Change runtime type ▸ T4 GPU**.
+> - The **first cell installs Python 3.10 via condacolab and auto-restarts the
+>   kernel** — this is expected. Wait for the reconnect, then continue from the
+>   next cell (Coqui `TTS` needs Python < 3.12, but Colab defaults to 3.12).
+> - The first model load downloads the checkpoint (~2 GB) from HuggingFace.
