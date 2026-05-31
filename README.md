@@ -7,10 +7,6 @@
 
 *A production-oriented Levantine Text-to-Speech pipeline built on a fine-tuned **XTTS-v2** optimized for real-time conversational agents.*
 
-![Python](https://img.shields.io/badge/Python-3.10-3776AB?logo=python&logoColor=white)
-![FastAPI](https://img.shields.io/badge/Serving-FastAPI%20%2B%20WebSocket-009688?logo=fastapi&logoColor=white)
-![Pipecat](https://img.shields.io/badge/Agent-Pipecat-5A45FF)
-![License](https://img.shields.io/badge/License-Apache--2.0-blue)
 
 [![Demo](https://img.shields.io/badge/🔊_Live_Demo-Listen-2ea043)](https://mohammedaly22.github.io/Leva-TTS/)
 [![HF Model](https://img.shields.io/badge/🤗_Model-Leva--TTS-FFD21E)](https://huggingface.co/mohammedaly22/leva-tts)
@@ -583,11 +579,3 @@ leva-tts/
   url     = {https://huggingface.co/mohammedaly22},
 }
 ```
-
----
-
-<div align="center">
-
-*Built with ❤️ for natural Levantine Arabic speech synthesis*
-
-</div>
