@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name            = "leva-tts"
-version         = "0.1.1"
+version         = "0.1.2"
 description     = "Low-latency Levantine Arabic / English code-switching TTS (fine-tuned XTTS-v2)"
 readme          = "README.md"
 license         = "Apache-2.0"

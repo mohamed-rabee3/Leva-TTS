@@ -23,7 +23,7 @@ Pip-install inference quick start
     for chunk in tts.zero_shot_stream("...", "my_voice.wav"):
         ...
 """
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 __author__  = "Mohammed Aly"
 
 import os
@@ -199,14 +199,17 @@ class LevaTTS:
     def _resolve_model(self) -> Path:
         cache = Path.home() / ".cache" / "leva_tts"
         # already downloaded?
-        if (cache.rglob("best_model.pth") and any(cache.rglob("best_model.pth")))                 or any(cache.rglob("*.pth")):
+        if any(cache.rglob("best_model.pth")) or any(cache.rglob("*.pth")):
             return cache
         cache.mkdir(parents=True, exist_ok=True)
-        # 1. HuggingFace
+        # 1. HuggingFace — fetch ONLY what inference needs (skip the sample_wavs/ demos)
         try:
             from huggingface_hub import snapshot_download
             print(f"[Leva-TTS] Downloading model from {self.HF_MODEL_ID} …")
-            return Path(snapshot_download(self.HF_MODEL_ID, local_dir=str(cache)))
+            return Path(snapshot_download(
+                self.HF_MODEL_ID, local_dir=str(cache),
+                allow_patterns=["best_model.pth", "config.json", "reference_audios/*"],
+            ))
         except Exception as e:
             print(f"[Leva-TTS] HF download failed ({e}); trying GitHub release …")
         # 2. GitHub release fallback
@@ -254,11 +257,20 @@ class LevaTTS:
         )
 
 
-def download_model(dest: Optional[str] = None) -> str:
-    """Download the Leva-TTS checkpoint + reference speakers. Returns the local path."""
+def download_model(dest: Optional[str] = None, include_samples: bool = False) -> str:
+    """
+    Download the Leva-TTS checkpoint + reference speakers. Returns the local path.
+
+    By default only the inference files are fetched (best_model.pth, config.json,
+    reference_audios/). Pass ``include_samples=True`` to also pull the audio
+    comparison samples used in the README/model card.
+    """
     from huggingface_hub import snapshot_download
     local = dest or str(Path.home() / ".cache" / "leva_tts")
+    patterns = None if include_samples else [
+        "best_model.pth", "config.json", "reference_audios/*",
+    ]
     print(f"Downloading {LevaTTS.HF_MODEL_ID} → {local}")
-    snapshot_download(LevaTTS.HF_MODEL_ID, local_dir=local)
+    snapshot_download(LevaTTS.HF_MODEL_ID, local_dir=local, allow_patterns=patterns)
     print("Done.")
     return local
