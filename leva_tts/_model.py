@@ -79,7 +79,7 @@ def load(checkpoint_dir: str = "checkpoints", device: str = "cuda"):
 
         ckpt = _find_ckpt(checkpoint_dir)
         if ckpt:
-            state = torch.load(ckpt, map_location="cpu")
+            state = torch.load(ckpt, map_location="cpu", weights_only=False)
             state = state.get("model", state)
             cleaned = {
                 (k[len("xtts.gpt."):] if k.startswith("xtts.gpt.")
