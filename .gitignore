@@ -1,0 +1,100 @@
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+*.egg
+dist/
+build/
+.eggs/
+.Python
+pip-wheel-metadata/
+
+# ── Virtual environments ───────────────────────────────────────────────────────
+.env
+.venv
+env/
+venv/
+.conda/
+
+# ── Data (large files — use DVC or HuggingFace) ───────────────────────────────
+data/raw/
+data/processed/
+data/synthetic_data/
+data/levantine_50k.txt
+*.wav
+*.flac
+*.mp3
+*.ogg
+*.opus
+*.pcm
+
+# ── Eval Results  ─────────────────────────────────────────────────────────────
+eval_results/
+
+# ── Model weights & checkpoints ───────────────────────────────────────────────
+checkpoints/
+*.pth
+*.pt
+*.onnx
+*.gguf
+
+# ── HuggingFace cache ─────────────────────────────────────────────────────────
+~/.cache/huggingface/
+
+# ── TensorBoard ───────────────────────────────────────────────────────────────
+checkpoints/tensorboard/
+runs/
+
+# ── IDE ───────────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+.claude/
+
+# ── Jupyter ───────────────────────────────────────────────────────────────────
+.ipynb_checkpoints/
+*.ipynb
+
+# ── Logs ──────────────────────────────────────────────────────────────────────
+*.log
+*.out
+
+# ── Keep sample WAVs (incl. subdirs) used by the README comparison tables ─────
+!sample_wavs/
+!sample_wavs/**
+!sample_wavs/**/*.wav
+
+# ── Keep the 10 built-in reference speakers (small; README + package fallback) ─
+!reference_audios/
+!reference_audios/**
+!reference_audios/*.wav
+!reference_audios/*.mp3
+!reference_audios/references.json
+
+
+# ── Byte-compiled from templates ──────────────────────────────────────────────
+condaenv.*.requirements.txt
+
+# ── Data gathering / synthesis scripts (not part of the package) ──────────────
+scripts/upload_to_hf.py
+scripts/synthesize_checkpoint.py
+scripts/_sample_spec.py
+scripts/gen_samples_lahgtna.py
+scripts/gen_samples_xtts_base.py
+
+# ── Data (keep only lexicon CSV) ──────────────────────────────────────────────
+data/raw/
+data/processed/
+data/synthetic_data/
+data/levantine_50k.txt
+data/ha_ta_report.json
+# Keep: data/levantine_lexicon.csv (tracked)
+
+
+# ── HF upload staging (not tracked) ───────────────────────────────────────────
+hf_staging/

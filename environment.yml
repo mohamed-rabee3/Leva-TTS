@@ -1,0 +1,88 @@
+name: leva-tts
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+  - defaults
+
+dependencies:
+  - python=3.11
+  - pip
+  # ── FIX: setuptools in the conda layer provides pkg_resources during
+  #         pip's isolated build environments (avoids ModuleNotFoundError) ──
+  - setuptools>=68
+  - wheel
+  - nvidia::cuda-nvcc=12.1   # nvcc for DeepSpeed FULL mode
+  # ── System libraries ────────────────────────────────────────────────────────
+  - ffmpeg
+  - libsndfile
+
+  - pip:
+    # ── FIX: list these first so they land in every isolated build env ───────
+    - setuptools>=68
+    - wheel
+
+    # ── Core TTS – Coqui XTTS-v2 ────────────────────────────────────────────
+    - TTS==0.22.0
+    - trainer==0.0.36
+
+    # ── PyTorch (CUDA 12.1 wheels) ───────────────────────────────────────────
+    - torch==2.3.0
+    - torchaudio==2.3.0
+
+    # ── DeepSpeed is OPTIONAL (training-only, CUDA-sensitive source build).
+    #    Install separately if needed:  bash scripts/install_deepspeed.sh
+    #    Inference does NOT require it. ──────────────────────────────────────
+
+    # ── sympy: required by torch.fx / transformers symbolic shapes ───────────
+    - sympy
+
+    # ── Audio processing ─────────────────────────────────────────────────────
+    - librosa==0.10.2
+    - soundfile==0.12.1
+    - pydub==0.25.1
+    - webrtcvad-wheels         # pre-built VAD binary (avoids C-compile)
+    - noisereduce==3.0.2
+
+    # ── Server / API ─────────────────────────────────────────────────────────
+    - fastapi==0.111.0
+    - uvicorn[standard]==0.30.1
+    - websockets==11.0.3       # gradio-client 1.0.2 requires websockets<12.0
+    - python-multipart==0.0.9
+    - requests==2.32.3
+    - ormsgpack                # msgpack serialization for streaming clients
+
+    # ── Pipecat voice-agent integration (needs openai for its TTSService) ────
+    - pipecat-ai==0.0.48
+    - openai                   # imported internally by pipecat ai_services
+
+    # ── Evaluation ───────────────────────────────────────────────────────────
+    - openai-whisper           # ASR round-trip (CER/WER)
+    - jiwer==3.0.4
+    - transformers==4.41.2
+    - huggingface-hub==0.23.3
+    - datasets==2.20.0
+    # UTMOS (reference-free MOS) loads at runtime via torch.hub — no pip pkg:
+    #   torch.hub.load("tarepan/SpeechMOS:v1.2.0", "utmos22_strong")
+
+    # ── Training utilities ────────────────────────────────────────────────────
+    - tensorboard==2.17.0
+    - accelerate==0.31.0
+    - wandb==0.17.3
+
+    # ── Gradio demo ───────────────────────────────────────────────────────────
+    - gradio==4.37.1
+
+    # ── Testing ───────────────────────────────────────────────────────────────
+    - pytest>=8.0
+
+    # ── General utilities ─────────────────────────────────────────────────────
+    - rich==13.7.1
+    - pyyaml==6.0.1
+    - omegaconf==2.3.0
+    - numpy==1.26.4
+    - scipy==1.13.1
+    - pandas==1.5.3          # TTS==0.22.0 requires pandas<2.0,>=1.4
+    - matplotlib==3.9.0
+    - tqdm==4.66.4
+    - packaging==24.1

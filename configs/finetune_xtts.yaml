@@ -1,0 +1,87 @@
+# ─── XTTS-v2 Fine-tune Configuration ─────────────────────────────────────────
+run_name: leva_xtts_ft
+project_name: leva-tts
+output_path: ./checkpoints
+
+# Pre-trained XTTS-v2 weights (auto-downloaded from HuggingFace)
+pretrained_model: tts_models/multilingual/multi-dataset/xtts_v2
+
+# ─── Data ─────────────────────────────────────────────────────────────────────
+datasets:
+  # ── Lahgtna synthetic (primary — 50K high-quality Levantine + CS) ────────
+  - name: synthetic_levantine
+    path: ./data/processed/synthetic
+    meta_file: metadata.csv
+    language: ar
+    formatter: leva_tts
+
+  # ── LibriSpeech train-clean-100 (English, capped to 20 h) ────────────────
+  - name: librispeech_en
+    path: ./data/processed/librispeech
+    meta_file: metadata.csv
+    language: en
+    formatter: leva_tts
+
+# Reference speaker WAV (used during eval synthesis)
+speaker_reference: ./reference_audios/Saad.wav
+eval_language: ar
+
+# ─── Training ─────────────────────────────────────────────────────────────────
+epochs: 30
+batch_size: 4
+grad_accum_steps: 8          # effective batch = 32
+eval_batch_size: 4
+num_loader_workers: 8
+eval_split_size: 0.01
+eval_split_max_size: 128
+
+# ─── Optimizer ────────────────────────────────────────────────────────────────
+optimizer: AdamW
+lr: 5.0e-6
+optimizer_params:
+  betas: [0.9, 0.96]
+  eps: 1.0e-8
+  weight_decay: 1.0e-2
+optimizer_wd_only_on_weights: true
+
+lr_scheduler: MultiStepLR
+lr_scheduler_params:
+  milestones: [50000, 150000, 300000]
+  gamma: 0.5
+  last_epoch: -1
+
+# ─── Logging / Checkpointing ──────────────────────────────────────────────────
+dashboard_logger: tensorboard
+print_step: 50
+plot_step: 200
+log_model_step: 1000
+save_step: 2000
+save_n_checkpoints: 3
+
+# ─── Audio ────────────────────────────────────────────────────────────────────
+audio:
+  sample_rate: 22050
+  output_sample_rate: 24000
+
+# ─── GPT model args (XTTS-v2 backbone) ────────────────────────────────────────
+# model_args verified against TTS==0.22.0:
+# invalid keys removed: use_perceiver_resampler, max_conditioning_length
+model_args:
+  gpt_num_audio_tokens: 1026
+  gpt_start_audio_token: 1024
+  gpt_stop_audio_token: 1025
+  gpt_use_masking_gt_prompt_approach: true
+  gpt_use_perceiver_resampler: true
+
+# ─── Test sentences generated every plot_step ─────────────────────────────────
+test_sentences:
+  - text: "كيفك اليوم؟ إنت شو عم تعمل؟"
+    language: ar
+  - text: "Hello, how are you doing today?"
+    language: en
+  - text: "هلق أنا عندي مشوار كتير مهم بكرا"
+    language: ar
+  - text: "من فترة طويلة ما شفت أصحاب الجامعة، وكل واحد صار مشغول بحياته وشغله، بس كل ما نتذكّر أيام الدراسة منضحك عالقصص اللي كانت تصير معنا وكأنها مبارح مو من سنين."
+    language: ar
+  - text: "بدي أحكيلك عن the new project اللي عم نشتغل عليه"
+    language: ar

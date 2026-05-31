@@ -1,0 +1,59 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name            = "leva-tts"
+version         = "0.1.0"
+description     = "Low-latency Levantine Arabic / English code-switching TTS"
+readme          = "README.md"
+license         = {text = "MIT"}
+requires-python = ">=3.11"
+authors         = [{name = "Mohammed Aly", email = "mae678900@gmail.com"}]
+keywords        = ["tts", "arabic", "levantine", "code-switching", "speech-synthesis"]
+classifiers     = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Topic :: Multimedia :: Sound/Audio :: Speech",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.11",
+]
+
+dependencies = [
+    "TTS>=0.22.0",
+    "torch>=2.3.0",
+    "torchaudio>=2.3.0",
+    "soundfile>=0.12.1",
+    "librosa>=0.10.2",
+    "huggingface_hub>=0.23.3",
+    "rich>=13.7.1",
+    "numpy>=1.26.4",
+    "scipy>=1.11",
+    "requests>=2.32",
+    "tqdm>=4.66",
+    "pyyaml>=6.0",
+    "sympy",                 # required by torch.fx symbolic shapes
+    "transformers>=4.41,<4.42",
+]
+
+[project.optional-dependencies]
+server   = ["fastapi>=0.111", "uvicorn[standard]>=0.30", "websockets>=11"]
+pipecat  = ["pipecat-ai>=0.0.48", "openai"]
+gradio   = ["gradio>=4.37"]
+all      = ["leva-tts[server,pipecat,gradio]"]
+
+[project.scripts]
+leva-tts         = "leva_tts.cli:main"
+leva-tts-server  = "leva_tts.server.app:cli_main"
+
+[project.urls]
+Homepage    = "https://github.com/mohammedaly22/leva-tts"
+HuggingFace = "https://huggingface.co/mohammedaly22"
+Dataset     = "https://huggingface.co/datasets/mohammedaly22/lahgtna-levantine-tts"
+
+[tool.setuptools.packages.find]
+where   = ["."]
+include = ["leva_tts*"]
+
+[tool.setuptools.package-data]
+leva_tts = ["py.typed"]
