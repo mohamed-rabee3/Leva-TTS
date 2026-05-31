@@ -8,7 +8,6 @@
 *A production-oriented Levantine Text-to-Speech pipeline built on a fine-tuned **XTTS-v2** optimized for real-time conversational agents.*
 
 ![Python](https://img.shields.io/badge/Python-3.10-3776AB?logo=python&logoColor=white)
-![PyTorch](https://img.shields.io/badge/PyTorch-2.8-EE4C2C?logo=pytorch&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/Serving-FastAPI%20%2B%20WebSocket-009688?logo=fastapi&logoColor=white)
 ![Pipecat](https://img.shields.io/badge/Agent-Pipecat-5A45FF)
 ![License](https://img.shields.io/badge/License-Apache--2.0-blue)
