@@ -68,37 +68,186 @@ Measured on a single **NVIDIA H100** (fp16) over a 15-sentence held-out set
 
 ## 🎵 Audio Samples
 
+> Click a sentence to expand and play the three models side-by-side.
+> Progression: **Base XTTS-v2 → Lahgtna v2 → Leva-TTS**.
+
 ### Model Comparison
 
-> Showing the same sentence across three models to demonstrate progression.
+<details open>
+<summary>كيفك اليوم؟ إنت شو عم تعمل؟ — **Mohamed (M)**</summary>
 
-| Text | Base XTTS-v2 | Lahgtna v2 (Lev. fine-tune) | **Leva-TTS (this model)** |
-|------|-------------|---------------------------|---------------------------|
-| كيفك اليوم؟ إنت شو عم تعمل؟ | [▶](sample_wavs/compare_base.wav) | [▶](sample_wavs/compare_lahgtna.wav) | [▶](sample_wavs/leva_tts/mohamed_ar.wav) |
-| شو رأيك نعمل brainstorming session صغيرة قبل الـ meeting، يمكن تطلع معنا أفكار أحسن للـ product design؟ | [▶](sample_wavs/compare_cs_base.wav) | [▶](sample_wavs/compare_cs_lahgtna.wav) | [▶](sample_wavs/leva_tts/mohamed_cs.wav) |
+**Base XTTS-v2**
+
+https://github.com/MohammedAly22/Leva-TTS/raw/main/sample_wavs/compare_base.wav
+
+**Lahgtna v2** (Levantine fine-tune)
+
+https://github.com/MohammedAly22/Leva-TTS/raw/main/sample_wavs/compare_lahgtna.wav
+
+**🟢 Leva-TTS** (this model)
+
+https://github.com/MohammedAly22/Leva-TTS/raw/main/sample_wavs/leva_tts/mohamed_ar.wav
+
+</details>
+
+<details>
+<summary>شو رأيك نعمل brainstorming session صغيرة قبل الـ meeting؟ — **Mohamed (M)**</summary>
+
+**Base XTTS-v2**
+
+https://github.com/MohammedAly22/Leva-TTS/raw/main/sample_wavs/compare_cs_base.wav
+
+**Lahgtna v2** (Levantine fine-tune)
+
+https://github.com/MohammedAly22/Leva-TTS/raw/main/sample_wavs/compare_cs_lahgtna.wav
+
+**🟢 Leva-TTS** (this model)
+
+https://github.com/MohammedAly22/Leva-TTS/raw/main/sample_wavs/leva_tts/mohamed_cs.wav
+
+</details>
 
 ### Pure Levantine Arabic
 
-| Text | Speaker | Base XTTS-v2 | Lahgtna v2 | **Leva-TTS** |
-|------|---------|--------------|------------|--------------|
-| كيفك اليوم؟ إنت شو عم تعمل هَلَّق؟ | Badr (M) | [▶](sample_wavs/xtts_base/badr_ar.wav) | [▶](sample_wavs/lahgtna/badr_ar.wav) | [▶](sample_wavs/leva_tts/badr_ar.wav) |
-| هَلَّق رح أروح على البيت وبكرا برجع. | Amina (F) | [▶](sample_wavs/xtts_base/amina_ar.wav) | [▶](sample_wavs/lahgtna/amina_ar.wav) | [▶](sample_wavs/leva_tts/amina_ar.wav) |
-| شو رأيك نطلع نتمشى شوي بعد الشغل إذا الجو كان منيح؟ | Rami (M) | [▶](sample_wavs/xtts_base/rami_ar.wav) | [▶](sample_wavs/lahgtna/rami_ar.wav) | [▶](sample_wavs/leva_tts/rami_ar.wav) |
+<details>
+<summary>كيفك اليوم؟ إنت شو عم تعمل هَلَّق؟ — **Badr (M)**</summary>
+
+**Base XTTS-v2**
+
+https://github.com/MohammedAly22/Leva-TTS/raw/main/sample_wavs/xtts_base/badr_ar.wav
+
+**Lahgtna v2** (Levantine fine-tune)
+
+https://github.com/MohammedAly22/Leva-TTS/raw/main/sample_wavs/lahgtna/badr_ar.wav
+
+**🟢 Leva-TTS** (this model)
+
+https://github.com/MohammedAly22/Leva-TTS/raw/main/sample_wavs/leva_tts/badr_ar.wav
+
+</details>
+
+<details>
+<summary>هَلَّق رح أروح على البيت وبكرا برجع. — **Amina (F)**</summary>
+
+**Base XTTS-v2**
+
+https://github.com/MohammedAly22/Leva-TTS/raw/main/sample_wavs/xtts_base/amina_ar.wav
+
+**Lahgtna v2** (Levantine fine-tune)
+
+https://github.com/MohammedAly22/Leva-TTS/raw/main/sample_wavs/lahgtna/amina_ar.wav
+
+**🟢 Leva-TTS** (this model)
+
+https://github.com/MohammedAly22/Leva-TTS/raw/main/sample_wavs/leva_tts/amina_ar.wav
+
+</details>
+
+<details>
+<summary>شو رأيك نطلع نتمشى شوي بعد الشغل إذا الجو كان منيح؟ — **Rami (M)**</summary>
+
+**Base XTTS-v2**
+
+https://github.com/MohammedAly22/Leva-TTS/raw/main/sample_wavs/xtts_base/rami_ar.wav
+
+**Lahgtna v2** (Levantine fine-tune)
+
+https://github.com/MohammedAly22/Leva-TTS/raw/main/sample_wavs/lahgtna/rami_ar.wav
+
+**🟢 Leva-TTS** (this model)
+
+https://github.com/MohammedAly22/Leva-TTS/raw/main/sample_wavs/leva_tts/rami_ar.wav
+
+</details>
 
 ### 🔀 Code-Switching (Levantine + English)
 
-| Text | Speaker | Base XTTS-v2 | Lahgtna v2 | **Leva-TTS** |
-|------|---------|--------------|------------|--------------|
-| هَلَّق أنا عم أشتغل على the new project اللي حكيتلك عنه. | Badr (M) | [▶](sample_wavs/xtts_base/badr_cs.wav) | [▶](sample_wavs/lahgtna/badr_cs.wav) | [▶](sample_wavs/leva_tts/badr_cs.wav) |
-| والله the weather today كتير حلو، بِدِّي أطلع برا. | Fatma (F) | [▶](sample_wavs/xtts_base/fatma_cs.wav) | [▶](sample_wavs/lahgtna/fatma_cs.wav) | [▶](sample_wavs/leva_tts/fatma_cs.wav) |
-| بِدِّي أحكيلك عن the meeting اللي كان مهم كتير اليوم. | Mona (F) | [▶](sample_wavs/xtts_base/mona_cs.wav) | [▶](sample_wavs/lahgtna/mona_cs.wav) | [▶](sample_wavs/leva_tts/mona_cs.wav) |
+<details>
+<summary>هَلَّق أنا عم أشتغل على the new project اللي حكيتلك عنه. — **Badr (M)**</summary>
+
+**Base XTTS-v2**
+
+https://github.com/MohammedAly22/Leva-TTS/raw/main/sample_wavs/xtts_base/badr_cs.wav
+
+**Lahgtna v2** (Levantine fine-tune)
+
+https://github.com/MohammedAly22/Leva-TTS/raw/main/sample_wavs/lahgtna/badr_cs.wav
+
+**🟢 Leva-TTS** (this model)
+
+https://github.com/MohammedAly22/Leva-TTS/raw/main/sample_wavs/leva_tts/badr_cs.wav
+
+</details>
+
+<details>
+<summary>والله the weather today كتير حلو، بِدِّي أطلع برا. — **Fatma (F)**</summary>
+
+**Base XTTS-v2**
+
+https://github.com/MohammedAly22/Leva-TTS/raw/main/sample_wavs/xtts_base/fatma_cs.wav
+
+**Lahgtna v2** (Levantine fine-tune)
+
+https://github.com/MohammedAly22/Leva-TTS/raw/main/sample_wavs/lahgtna/fatma_cs.wav
+
+**🟢 Leva-TTS** (this model)
+
+https://github.com/MohammedAly22/Leva-TTS/raw/main/sample_wavs/leva_tts/fatma_cs.wav
+
+</details>
+
+<details>
+<summary>بِدِّي أحكيلك عن the meeting اللي كان مهم كتير اليوم. — **Mona (F)**</summary>
+
+**Base XTTS-v2**
+
+https://github.com/MohammedAly22/Leva-TTS/raw/main/sample_wavs/xtts_base/mona_cs.wav
+
+**Lahgtna v2** (Levantine fine-tune)
+
+https://github.com/MohammedAly22/Leva-TTS/raw/main/sample_wavs/lahgtna/mona_cs.wav
+
+**🟢 Leva-TTS** (this model)
+
+https://github.com/MohammedAly22/Leva-TTS/raw/main/sample_wavs/leva_tts/mona_cs.wav
+
+</details>
 
 ### 🇬🇧 Pure English
 
-| Text | Speaker | Base XTTS-v2 | Lahgtna v2 | **Leva-TTS** |
-|------|---------|--------------|------------|--------------|
-| Hello, how are you doing today? | Lamyaa (F) | [▶](sample_wavs/xtts_base/lamyaa_en.wav) | [▶](sample_wavs/lahgtna/lamyaa_en.wav) | [▶](sample_wavs/leva_tts/lamyaa_en.wav) |
-| The project deadline is next Friday. | Mohamed (M) | [▶](sample_wavs/xtts_base/mohamed_en.wav) | [▶](sample_wavs/lahgtna/mohamed_en.wav) | [▶](sample_wavs/leva_tts/mohamed_en.wav) |
+<details>
+<summary>Hello, how are you doing today? — **Lamyaa (F)**</summary>
+
+**Base XTTS-v2**
+
+https://github.com/MohammedAly22/Leva-TTS/raw/main/sample_wavs/xtts_base/lamyaa_en.wav
+
+**Lahgtna v2** (Levantine fine-tune)
+
+https://github.com/MohammedAly22/Leva-TTS/raw/main/sample_wavs/lahgtna/lamyaa_en.wav
+
+**🟢 Leva-TTS** (this model)
+
+https://github.com/MohammedAly22/Leva-TTS/raw/main/sample_wavs/leva_tts/lamyaa_en.wav
+
+</details>
+
+<details>
+<summary>The project deadline is next Friday. — **Mohamed (M)**</summary>
+
+**Base XTTS-v2**
+
+https://github.com/MohammedAly22/Leva-TTS/raw/main/sample_wavs/xtts_base/mohamed_en.wav
+
+**Lahgtna v2** (Levantine fine-tune)
+
+https://github.com/MohammedAly22/Leva-TTS/raw/main/sample_wavs/lahgtna/mohamed_en.wav
+
+**🟢 Leva-TTS** (this model)
+
+https://github.com/MohammedAly22/Leva-TTS/raw/main/sample_wavs/leva_tts/mohamed_en.wav
+
+</details>
 
 > 📝 Generate your own: `python scripts/inference.py --text "your text"`
 
