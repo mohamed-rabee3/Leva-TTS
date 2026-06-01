@@ -258,6 +258,26 @@ pip install -e .
 bash scripts/install_deepspeed.sh
 ```
 
+> **Coqpit fork (only if you hit an import error).** `coqui-tts` uses a *forked*
+> Coqpit published as **`coqpit-config`** (it still imports as `coqpit`). If the
+> original `coqpit` is also present — e.g. an environment upgraded in place from
+> an older Leva-TTS — it shadows the fork and you'll see:
+> ```
+> ImportError: coqui-tts switched to a forked version of Coqpit ...
+> # or, after a partial uninstall:
+> ImportError: cannot import name 'Coqpit' from 'coqpit'
+> ```
+> Remove both and reinstall only the fork (a stale `coqpit/` dir can survive an
+> uninstall, so delete it explicitly):
+> ```bash
+> pip uninstall -y coqpit coqpit-config
+> rm -rf "$(python -c 'import site; print(site.getsitepackages()[0])')/coqpit"
+> pip install --force-reinstall --no-deps coqpit-config
+> python -c "from coqpit import Coqpit; print('coqpit OK')"
+> ```
+> A **fresh** `conda env create` from this repo installs only `coqpit-config`, so
+> this step is not needed on a clean setup.
+
 Download the checkpoint + reference speakers:
 
 ```bash
@@ -268,7 +288,7 @@ python -c "import leva_tts; leva_tts.download_model('./checkpoints')"
 
 ```bash
 # Built-in speaker
-python scripts/inference.py --text "كيفك اليوم؟" --speaker Amina --out output.wav
+python scripts/inference.py --text "كيفك اليوم؟ أتمنى ان كل شي تمام هَلَّق." --speaker Mohamed --out output.wav
 
 # Streaming mode
 python scripts/inference.py --text "..." --speaker Badr --stream
