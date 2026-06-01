@@ -1,3 +1,6 @@
+<img src="docs/LevaTTS Banner Image.png">
+
+---
 
 <div align="center">
 
@@ -350,10 +353,18 @@ python app.py
 # Open http://localhost:7860
 ```
 
-Features: 🎤 10-speaker dropdown with reference playback · 📝 processed-text
-preview (see exactly what XTTS-v2 receives) · 🎵 batch synthesis with TTFA / RTF /
-VRAM metrics · 🎙️ zero-shot upload (any 3–10 s clip) · 💡 pre-loaded
-code-switching examples.
+**Expected output:**
+
+<img src="docs/Gradio Demo Screenshot.jpeg">
+
+<br>
+
+**Features:**
+- 🎤 10-speaker dropdown with reference playback 
+- 📝 processed-text preview (see exactly what XTTS-v2 receives) 
+- 🎵 batch synthesis with TTFA / RTF / VRAM metrics
+- 🎙️ zero-shot upload (any 3–10 s clip)
+- 💡 pre-loaded code-switching examples.
 
 ### 6. Fine-tuning
 
