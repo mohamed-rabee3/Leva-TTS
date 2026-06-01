@@ -21,11 +21,10 @@ Usage::
 """
 from __future__ import annotations
 
-import json
 import re
 import unicodedata
 from pathlib import Path
-from typing import List, Optional
+from typing import Optional
 
 # Default CSV path
 from leva_tts.text.normalizer import normalize_entities, int_to_levantine, float_to_levantine
@@ -43,7 +42,6 @@ _DEFAULT_LEXICON_CSV = _find_lexicon()
 # ── Arabic helpers ────────────────────────────────────────────────────────────
 _HARAKAT = re.compile(r"[ً-ٰٟ]")
 _TATWEEL = re.compile(r"ـ")
-_AR_SPAN  = re.compile(r"[ء-غف-يٱ-ۓ]+")
 
 
 def strip_diac(t: str) -> str:
@@ -132,7 +130,6 @@ class TextProcessor:
 
         s = self._stage_unicode(text)
         s = self._stage_numbers(s)
-        s = self._stage_arabic_preproc(s)
 
         if self.verbose and s != text:
             self._print_stage("1-3 Normalize + numbers", text, s)
@@ -157,7 +154,7 @@ class TextProcessor:
     def _stage_unicode(self, text: str) -> str:
         text = unicodedata.normalize("NFC", text)
         text = re.sub(r"[​-\u200F\u202A-\u202E⁠-⁯]", "", text)
-        text = re.sub(r"[أإآٱ]", "أ", text)
+        # text = re.sub(r"[أإآٱ]", "أ", text)
         text = _TATWEEL.sub("", text)
         text = re.sub(r"([!?.,;:]){2,}", r"\1", text)
         return text
@@ -165,11 +162,6 @@ class TextProcessor:
     def _stage_numbers(self, text: str) -> str:
         """Verbalize all numeric entities (numbers, dates, times, URLs, …)."""
         return normalize_entities(text)
-
-
-    def _stage_arabic_preproc(self, text: str) -> str:
-        text = re.sub(r"ؤ", "و", text)
-        return text
 
     def _stage_lexicon(self, text: str) -> str:
         """Apply Levantine CSV overrides (partial diacritics + dialect corrections)."""

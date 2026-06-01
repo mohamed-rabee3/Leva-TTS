@@ -11,6 +11,13 @@ DEFAULT_SPEAKER  = "Mohamed"
 DEVICE           = "cuda"
 SERVER_PORT      = 7860
 SHARE            = False
+
+# ── Streaming tuning (smooth playback) ────────────────────────────────────────
+# Larger GPT stream chunk -> fewer, longer audio fragments -> fewer boundaries.
+STREAM_CHUNK_SIZE = 60          # was 20 (pipecat-style larger chunk)
+# Buffer generated audio to >= this duration before sending it to the browser
+# player, so each yielded segment is long enough to stitch gaplessly.
+STREAM_MIN_BUFFER_SEC = 0.6
 # ╚══════════════════════════════════════════════════════════════════════════╝
 
 import json
@@ -215,39 +222,104 @@ def synth_stream(text: str, ref_wav: str, language: str, gen: dict | None = None
 
 
 
-def synth_stream_chunks(text: str, ref_wav: str, language: str, gen: dict | None = None):
-    """Yield INDIVIDUAL chunks for the streaming=True HTML5 player (no waveform)."""
+def synth_stream_pipecat(text: str, ref_wav: str, language: str, gen: dict | None = None):
+    """
+    Streaming generator using the same pattern as the Pipecat LevaTTSService:
+
+    - GPU inference runs on a background thread (same as pipecat's run_in_executor)
+      so the generator never stalls waiting for the frontend to acknowledge a chunk.
+    - Raw float32 samples are converted to int16 PCM before queuing — the exact
+      conversion pipecat does: ``(clip(arr, -1, 1) * 32767).astype(int16)``.
+      int16 WAV is the universal browser-compatible PCM format; float32 chunks
+      introduce audible gaps/clicks in the HTML5 streaming player.
+    - Chunks are buffered to STREAM_MIN_BUFFER_SEC before yielding so each
+      segment the browser receives is long enough to play gaplessly.
+    """
+    import queue as stdlib_queue
+    import threading
     import torch
+
     gen = {**DEFAULT_GEN, **(gen or {})}
     gen["repetition_penalty"] = max(float(gen["repetition_penalty"]), 1.0)
     gen["length_penalty"]     = max(float(gen["length_penalty"]), 0.1)
     mdl, _ = _model_state.get()
-    processed = process_text(text)
+    processed  = process_text(text)
     gpt_cond, spk_emb = _model_state.get_conditioning(ref_wav)
     chunks_txt = split_text(processed)
+
+    min_samples = int(STREAM_MIN_BUFFER_SEC * SR)
+    # Unlimited queue — inference runs ahead of playback without backpressure stalls.
+    audio_q: stdlib_queue.Queue = stdlib_queue.Queue()
+
+    def _produce():
+        """Run inference on a background thread, push int16 chunks into audio_q."""
+        try:
+            for seg in chunks_txt:
+                for chunk in mdl.inference_stream(
+                    seg, language,
+                    gpt_cond_latent   = gpt_cond,
+                    speaker_embedding  = spk_emb,
+                    stream_chunk_size  = STREAM_CHUNK_SIZE,
+                    temperature        = gen["temperature"],
+                    length_penalty     = gen["length_penalty"],
+                    repetition_penalty = gen["repetition_penalty"],
+                    top_k              = gen["top_k"],
+                    top_p              = gen["top_p"],
+                    speed              = gen["speed"],
+                ):
+                    arr = chunk.squeeze().cpu().numpy().astype(np.float32)
+                    # Pipecat-style int16 conversion for smooth browser playback
+                    pcm_s16 = (np.clip(arr, -1.0, 1.0) * 32767).astype(np.int16)
+                    audio_q.put(pcm_s16)
+        except Exception as exc:
+            audio_q.put(exc)
+        finally:
+            audio_q.put(None)  # sentinel
+
+    torch.cuda.reset_peak_memory_stats() if torch.cuda.is_available() else None
     t0 = time.perf_counter(); first = True; ttfa = 0.0; total = 0; n = 0
+    buf: list = []; buf_len = 0
+
+    thread = threading.Thread(target=_produce, daemon=True)
+    thread.start()
+
     try:
-        for seg_idx, seg in enumerate(chunks_txt, 1):
-            for chunk in mdl.inference_stream(
-                seg, language,
-                gpt_cond_latent=gpt_cond, speaker_embedding=spk_emb,
-                stream_chunk_size=20,
-                temperature=gen["temperature"], length_penalty=gen["length_penalty"],
-                repetition_penalty=gen["repetition_penalty"],
-                top_k=gen["top_k"], top_p=gen["top_p"], speed=gen["speed"],
-            ):
-                arr = chunk.squeeze().cpu().numpy().astype(np.float32)
-                if first:
-                    ttfa = (time.perf_counter() - t0) * 1000; first = False
-                n += 1; total += len(arr)
-                yield ((SR, arr), processed,
-                       f"⚡ TTFA {ttfa:.0f} ms  |  seg {seg_idx}/{len(chunks_txt)}  |  chunk {n}  |  {total/SR:.1f}s")
+        while True:
+            item = audio_q.get()
+            if item is None:
+                break
+            if isinstance(item, Exception):
+                raise item
+
+            if first:
+                ttfa = (time.perf_counter() - t0) * 1000; first = False
+
+            total += len(item)
+            buf.append(item); buf_len += len(item)
+
+            if buf_len >= min_samples:
+                out = np.concatenate(buf); buf, buf_len = [], 0
+                n += 1
+                yield ((SR, out), processed,
+                       f"⚡ TTFA {ttfa:.0f} ms  |  buffer {n}  |  {total/SR:.1f}s")
+
+        if buf:
+            out = np.concatenate(buf); n += 1
+            yield ((SR, out), processed,
+                   f"⚡ TTFA {ttfa:.0f} ms  |  buffer {n}  |  {total/SR:.1f}s")
+
         wall = time.perf_counter() - t0; dur = total / SR if total else 0
         vram = torch.cuda.max_memory_allocated()/1e9 if torch.cuda.is_available() else 0
-        yield (None, processed, f"✅ TTFA {ttfa:.0f} ms  |  RTF {wall/max(dur,1e-9):.3f}  |  {dur:.1f}s  |  💾 {vram:.2f}GB")
+        yield (None, processed,
+               f"✅ TTFA {ttfa:.0f} ms  |  RTF {wall/max(dur,1e-9):.3f}  |  "
+               f"{dur:.1f}s  |  💾 {vram:.2f}GB")
+
     except Exception:
         audio, proc, m = synth_batch(text, ref_wav, language, gen)
         yield audio, proc, f"⚠️ stream→batch: {m}"
+
+    finally:
+        thread.join(timeout=10.0)
 
 
 # ── Gradio UI ─────────────────────────────────────────────────────────────────
@@ -481,7 +553,7 @@ Upload a clean audio recording — the model will synthesize in that voice.
                    "speed": float(spd), "length_penalty": float(lenp)}
             try:
                 if "Streaming" in mode:
-                    for audio, proc, m in synth_stream_chunks(text, ref, lang, gen):
+                    for audio, proc, m in synth_stream_pipecat(text, ref, lang, gen):
                         yield audio, None, proc, m
                 else:
                     audio, proc, m = synth_batch(text, ref, lang, gen)
@@ -511,7 +583,7 @@ Upload a clean audio recording — the model will synthesize in that voice.
                    "speed": float(spd), "length_penalty": float(lenp)}
             try:
                 if "Streaming" in mode:
-                    for audio, proc, m in synth_stream_chunks(text, ref_wav, lang, gen):
+                    for audio, proc, m in synth_stream_pipecat(text, ref_wav, lang, gen):
                         yield audio, None, proc, m
                 else:
                     audio, proc, m = synth_batch(text, ref_wav, lang, gen)
