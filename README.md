@@ -1,4 +1,4 @@
-<img src="docs/LevaTTS Banner Image.png">
+<img src="docs/LevaTTS-Banner-Image.png">
 
 ---
 
