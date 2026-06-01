@@ -109,9 +109,47 @@ conda activate leva-tts
 
 # System audio libraries (Ubuntu/Debian)
 sudo apt-get install -y espeak-ng ffmpeg libsndfile1
+```
 
+### 2. Install PyTorch first (must match your GPU driver)
+
+Install PyTorch **before** `leva-tts` so pip locks a CUDA build that matches your
+**GPU driver** — not the newest available. The defaults below install
+`torch 2.3.0 + cu121`, the exact build Leva-TTS is developed and validated on.
+
+```bash
+# CUDA 12.x driver (most H100 / A100 / RTX setups) — recommended
+pip install torch==2.3.0 torchaudio==2.3.0 --index-url https://download.pytorch.org/whl/cu121
+
+# CUDA 11.8 driver
+pip install torch==2.3.0 torchaudio==2.3.0 --index-url https://download.pytorch.org/whl/cu118
+
+# CPU only
+pip install torch==2.3.0 torchaudio==2.3.0 --index-url https://download.pytorch.org/whl/cpu
+```
+
+> **Why pin torch?** PyTorch **≥ 2.9** ships **CUDA-13** wheels that require a
+> CUDA-13 driver. On a common CUDA-12.x driver they fail at startup with
+> *"The NVIDIA driver on your system is too old."* Leva-TTS therefore caps
+> `torch < 2.9`; installing `torch==2.3.0+cu121` first guarantees a
+> driver-matched build. Check your driver with `nvidia-smi` (top-right
+> "CUDA Version").
+
+### 3. Install leva-tts
+
+```bash
 pip install leva-tts
 ```
+
+Because PyTorch is already installed and satisfies the `torch>=2.3,<2.9`
+constraint, pip leaves it untouched and only adds the remaining dependencies.
+
+> **Engine note:** Leva-TTS depends on **`coqui-tts`** — the maintained Coqui
+> fork that exposes the same `TTS`/XTTS modules. The original `TTS` package is
+> unmaintained and pins `numpy==1.22.0`, which cannot resolve against modern
+> `librosa`/`numba` on Python 3.10+ (the classic `ResolutionImpossible` error).
+> `coqui-tts` ships a coherent, numpy-2-compatible dependency set, so a plain
+> `pip install leva-tts` resolves cleanly.
 
 > First synthesis call auto-downloads the fine-tuned checkpoint and the 10
 > reference speakers from HuggingFace (`mohammedaly22/leva-tts`), falling back to
@@ -120,7 +158,7 @@ pip install leva-tts
 > python -c "import leva_tts; leva_tts.download_model()"
 > ```
 
-### 2. Initialize
+### 4. Initialize
 
 ```python
 from leva_tts import LevaTTS, SPEAKERS
@@ -136,7 +174,7 @@ print(SPEAKERS)
 #  'Amina', 'Fatma', 'Lamyaa', 'Mona', 'Haneen']
 ```
 
-### 3. Synthesize with a built-in speaker
+### 5. Synthesize with a built-in speaker
 
 `synthesize(text, speaker, language="ar", **gen_params)` returns `(wav, sr)` —
 a float32 NumPy array at 24 kHz. `speaker` **must** be one of the 10 names above,
@@ -157,7 +195,7 @@ wav, sr = tts.synthesize(
 sf.write("output.wav", wav, sr)   # sr == 24000
 ```
 
-### 4. Zero-shot voice cloning
+### 6. Zero-shot voice cloning
 
 `zero_shot_synthesize(text, reference_audio, language="ar", **gen_params)` —
 same as `synthesize`, but you pass a **path to your own 3–10 s reference clip**
@@ -172,7 +210,7 @@ wav, sr = tts.zero_shot_synthesize(
 sf.write("cloned.wav", wav, sr)
 ```
 
-### 5. Streaming (generators)
+### 7. Streaming (generators)
 
 `stream(...)` and `zero_shot_stream(...)` mirror the two methods above but
 **yield audio chunks** as they are generated — ideal for low-latency playback or
@@ -305,7 +343,7 @@ the XTTS-v2 fine-tuning steps are documented in the
 
 ```bash
 python scripts/prepare_data.py --metadata data/metadata.csv --out data/
-python scripts/train.py --config configs/train_config.json
+python scripts/train.py --config configs/<YOUR_TRAINING_CONFIG>.json
 ```
 
 ---

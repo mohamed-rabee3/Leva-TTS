@@ -22,13 +22,19 @@ dependencies:
     - setuptools>=68
     - wheel
 
-    # ── Core TTS – Coqui XTTS-v2 ────────────────────────────────────────────
-    - TTS==0.22.0
-    - trainer==0.0.36
+    # ── Core TTS – maintained Coqui fork (same TTS/XTTS modules) ────────────
+    #   The original `TTS==0.22.0` pins numpy==1.22.0, which cannot resolve
+    #   against modern librosa/numba — use `coqui-tts`, which ships a coherent,
+    #   numpy-2-compatible dependency set (numpy>=1.26, transformers>=4.57,
+    #   librosa>=0.11, numba>=0.58) and brings `coqui-tts-trainer` for training.
+    #   The [codec] extra pulls torchcodec (required for audio IO on torch>=2.9).
+    - coqui-tts[codec]>=0.27.5
 
-    # ── PyTorch (CUDA 12.1 wheels) ───────────────────────────────────────────
+    # ── PyTorch (CUDA 12.1 wheels — match the GPU driver; torch>=2.9 needs a
+    #    CUDA-13 driver and breaks on common CUDA-12.x systems) ───────────────
     - torch==2.3.0
     - torchaudio==2.3.0
+    - torchcodec==0.11.1       # coqui-tts audio IO (matches torch 2.3 / cu121)
 
     # ── DeepSpeed is OPTIONAL (training-only, CUDA-sensitive source build).
     #    Install separately if needed:  bash scripts/install_deepspeed.sh
@@ -38,8 +44,8 @@ dependencies:
     - sympy
 
     # ── Audio processing ─────────────────────────────────────────────────────
-    - librosa==0.10.2
-    - soundfile==0.12.1
+    - librosa>=0.11.0
+    - soundfile>=0.12.1
     - pydub==0.25.1
     - webrtcvad-wheels         # pre-built VAD binary (avoids C-compile)
     - noisereduce==3.0.2
@@ -59,15 +65,15 @@ dependencies:
     # ── Evaluation ───────────────────────────────────────────────────────────
     - openai-whisper           # ASR round-trip (CER/WER)
     - jiwer==3.0.4
-    - transformers==4.41.2
-    - huggingface-hub==0.23.3
-    - datasets==2.20.0
+    - transformers>=4.57,<5       # coqui-tts needs >=4.57; cap <5 (XTTS API)
+    - huggingface-hub>=0.23.3
+    - datasets>=2.20.0
     # UTMOS (reference-free MOS) loads at runtime via torch.hub — no pip pkg:
     #   torch.hub.load("tarepan/SpeechMOS:v1.2.0", "utmos22_strong")
 
     # ── Training utilities ────────────────────────────────────────────────────
     - tensorboard==2.17.0
-    - accelerate==0.31.0
+    - accelerate>=0.31.0
     - wandb==0.17.3
 
     # ── Gradio demo ───────────────────────────────────────────────────────────
@@ -80,9 +86,9 @@ dependencies:
     - rich==13.7.1
     - pyyaml==6.0.1
     - omegaconf==2.3.0
-    - numpy==1.26.4
-    - scipy==1.13.1
-    - pandas==1.5.3          # TTS==0.22.0 requires pandas<2.0,>=1.4
+    - numpy>=1.26.0
+    - scipy>=1.13.0
+    - pandas>=1.4,<3.0       # coqui-tts requires pandas<3.0,>=1.4
     - matplotlib==3.9.0
     - tqdm==4.66.4
     - packaging==24.1

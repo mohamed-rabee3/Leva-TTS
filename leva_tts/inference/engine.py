@@ -98,10 +98,19 @@ def ensure_base_xtts(cache=None) -> Path:
                                     Path.home() / ".local/share/tts"))
     cache = Path(cache)
     model_dir = "tts_models--multilingual--multi-dataset--xtts_v2"
-    try:
-        from TTS.utils.generic_utils import get_user_data_dir
-        coqui_default = Path(get_user_data_dir("tts"))
-    except Exception:
+    # `get_user_data_dir` lives in `trainer.io` in coqui-tts; the old `TTS`
+    # package exposed it from `TTS.utils.generic_utils`. Try both so the cache
+    # directory is detected correctly regardless of which is installed.
+    coqui_default = None
+    for _imp in ("trainer.io", "TTS.utils.generic_utils"):
+        try:
+            import importlib
+            get_user_data_dir = importlib.import_module(_imp).get_user_data_dir
+            coqui_default = Path(get_user_data_dir("tts"))
+            break
+        except Exception:
+            continue
+    if coqui_default is None:
         coqui_default = Path.home() / ".local/share/tts"
 
     for base in (cache, coqui_default):
