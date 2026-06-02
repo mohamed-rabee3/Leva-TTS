@@ -13,7 +13,7 @@
 
 [![Demo](https://img.shields.io/badge/🔊_Live_Demo-Listen-2ea043)](https://mohammedaly22.github.io/Leva-TTS/)
 [![HF Model](https://img.shields.io/badge/🤗_Model-Leva--TTS-FFD21E)](https://huggingface.co/mohammedaly22/leva-tts)
-[![HF Space](https://img.shields.io/badge/🤗_Space-Gradio_Demo-FFD21E)]([https://huggingface.co/spaces/mohammedaly22/leva-tts](https://huggingface.co/spaces/mohammedaly22/Levantine-Zero-Shot-TTS))
+[![HF Space](https://img.shields.io/badge/🤗_Space-Gradio_Demo-FFD21E)](https://huggingface.co/spaces/mohammedaly22/Levantine-Zero-Shot-TTS)
 [![PyPI](https://img.shields.io/pypi/v/leva-tts?color=3775A9&logo=pypi&logoColor=white)](https://pypi.org/project/leva-tts/)
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/MohammedAly22/Leva-TTS/blob/main/examples/01_quick_start.ipynb)
 
