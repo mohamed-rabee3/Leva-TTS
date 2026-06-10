@@ -1,11 +1,11 @@
 """
-TextProcessor — complete text normalization for Levantine Arabic / English TTS.
+TextProcessor — complete text normalization for Saudi Arabic / English TTS.
 
 Pipeline (no external diacritizer required):
   1. Unicode NFC + control-char removal
-  2. Number / currency expansion (Levantine verbalization)
+  2. Number / currency expansion (Saudi verbalization, incl. ٠-٩ digits)
   3. Arabic pre-processing (alef, tatweel)
-  4. Levantine lexicon CSV overrides  (partial diacritics on homographs + dialect words)
+  4. Saudi lexicon CSV overrides  (partial diacritics on homographs + dialect words)
   5. Final whitespace cleanup
 
 Usage::
@@ -13,11 +13,11 @@ Usage::
     from leva_tts.text.processor import TextProcessor
 
     tp = TextProcessor()
-    text = tp.process("هلق أنا عم أشتغل على the project")
+    text = tp.process("الحين أنا قاعد أشتغل على the project")
 
     # Verbose pipeline view
     tp_v = TextProcessor(verbose=True)
-    tp_v.process("شو عم تعمل؟ the deadline is بكرا")
+    tp_v.process("وش قاعد تسوي؟ the deadline is بكرة")
 """
 from __future__ import annotations
 
@@ -27,10 +27,10 @@ from pathlib import Path
 from typing import Optional
 
 # Default CSV path
-from leva_tts.text.normalizer import normalize_entities, int_to_levantine, float_to_levantine
+from leva_tts.text.normalizer import normalize_entities, int_to_saudi, float_to_saudi
 
 def _find_lexicon() -> Path:
-    """Locate the Levantine lexicon CSV: bundled-in-package first, then repo-root."""
+    """Locate the Saudi lexicon CSV: bundled-in-package first, then repo-root."""
     bundled = Path(__file__).with_name("levantine_lexicon.csv")
     if bundled.exists():
         return bundled
@@ -48,28 +48,28 @@ def strip_diac(t: str) -> str:
     return _HARAKAT.sub("", _TATWEEL.sub("", t))
 
 
-# ── Number verbalization (Levantine) ──────────────────────────────────────────
+# ── Number verbalization (Saudi colloquial) ───────────────────────────────────
 _ONES = {
-    0:"",1:"واحد",2:"اتنين",3:"تلاتة",4:"أربعة",5:"خمسة",
-    6:"ستة",7:"سبعة",8:"تمانية",9:"تسعة",10:"عشرة",
-    11:"إحدعش",12:"اتناعش",13:"تلتعش",14:"أربعتعش",15:"خمستعش",
-    16:"ستعش",17:"سبعتعش",18:"تمنتعش",19:"تسعتعش",
+    0:"",1:"واحد",2:"اثنين",3:"ثلاثة",4:"أربعة",5:"خمسة",
+    6:"ستة",7:"سبعة",8:"ثمانية",9:"تسعة",10:"عشرة",
+    11:"إحدعش",12:"اثنعش",13:"ثلثطعش",14:"أربعطعش",15:"خمسطعش",
+    16:"سطعش",17:"سبعطعش",18:"ثمنطعش",19:"تسعطعش",
 }
-_TENS   = {2:"عشرين",3:"تلاتين",4:"أربعين",5:"خمسين",
-            6:"ستين",7:"سبعين",8:"تمانين",9:"تسعين"}
-_HUNDS  = {1:"مية",2:"مئتين",3:"تلتمية",4:"أربعمية",5:"خمسمية",
-            6:"ستمية",7:"سبعمية",8:"تمنمية",9:"تسعمية"}
+_TENS   = {2:"عشرين",3:"ثلاثين",4:"أربعين",5:"خمسين",
+            6:"ستين",7:"سبعين",8:"ثمانين",9:"تسعين"}
+_HUNDS  = {1:"مية",2:"ميتين",3:"ثلثمية",4:"أربعمية",5:"خمسمية",
+            6:"ستمية",7:"سبعمية",8:"ثمنمية",9:"تسعمية"}
 
 
-def int_to_levantine(n: int) -> str:
+def int_to_saudi(n: int) -> str:
     if n == 0: return "صفر"
-    if n < 0:  return "ناقص " + int_to_levantine(-n)
+    if n < 0:  return "ناقص " + int_to_saudi(-n)
     parts = []
     if n >= 1_000_000:
-        parts.append(int_to_levantine(n // 1_000_000) + " مليون")
+        parts.append(int_to_saudi(n // 1_000_000) + " مليون")
         n %= 1_000_000
     if n >= 1_000:
-        parts.append(int_to_levantine(n // 1_000) + " ألف")
+        parts.append(int_to_saudi(n // 1_000) + " ألف")
         n %= 1_000
     if n >= 100:
         parts.append(_HUNDS.get(n // 100, f"{n//100} مية"))
@@ -99,12 +99,13 @@ def _get_console():
 # ── TextProcessor ─────────────────────────────────────────────────────────────
 class TextProcessor:
     """
-    Complete text-processing pipeline for Levantine Arabic / English TTS.
+    Complete text-processing pipeline for Saudi Arabic / English TTS.
 
     Parameters
     ----------
     lexicon_csv : str | Path
-        Path to ``data/levantine_lexicon.csv`` (Levantine override CSV).
+        Path to ``data/levantine_lexicon.csv`` (Saudi override CSV — the
+        original Levantine filename is kept for path compatibility).
     verbose : bool
         Show pipeline stages in the terminal using rich panels.
     """
@@ -164,7 +165,7 @@ class TextProcessor:
         return normalize_entities(text)
 
     def _stage_lexicon(self, text: str) -> str:
-        """Apply Levantine CSV overrides (partial diacritics + dialect corrections)."""
+        """Apply Saudi CSV overrides (partial diacritics + dialect corrections)."""
         overrides = self._get_overrides()
         if not overrides:
             return text

@@ -6,8 +6,9 @@ Sources
   1. LibriSpeech clean-100  (data/raw/librispeech_hf)
        English multi-speaker, capped to MAX_HOURS_EN hours
   2. Lahgtna synthetic      (data/synthetic_data)
-       50K high-quality Levantine + CS utterances from lahgtna-omnivoice-v2
-       Already at synthesis quality — only resampling + metadata needed.
+       50K high-quality Saudi + CS + number utterances from lahgtna-omnivoice-v2
+       (single speaker: hoda). Already at synthesis quality — only
+       resampling + metadata needed.
 
 Output (XTTS-compatible metadata.csv per source)
 -------
@@ -190,7 +191,7 @@ if __name__ == "__main__":
             "    meta_file: metadata.csv\n"
             "    language: en\n"
             "    formatter: ljspeech\n\n"
-            "  - name: synthetic_levantine\n"
+            "  - name: synthetic_saudi\n"
             "    path: ./data/processed/synthetic\n"
             "    meta_file: metadata.csv\n"
             "    language: ar\n"

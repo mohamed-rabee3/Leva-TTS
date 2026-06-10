@@ -1,65 +1,81 @@
 """
-Comprehensive text normalization for Levantine Arabic TTS.
+Comprehensive text normalization for Saudi Arabic TTS.
 
 Verbalizes (in priority order to avoid pattern conflicts):
   1. URLs            https://... www....        → "رابط"
   2. Emails          user@gmail.com              → "user آت gmail نقطة com"
-  3. Dates           31/01/2026, 15-3-2026       → "واحد وتلاتين كانون الثاني ..."
-  4. Times           7:35, 10:15, 6:45           → "الساعة سبعة وخمسة وتلاتين دقيقة"
-  5. Phone numbers   0790001234, +962...         → digit-by-digit
-  6. Alphanumeric    RJ402, AB1234               → "RJ أربعمية واتنين"
-  7. Currency syms   $245.75, 50€                → "مئتين ... دولار"
-  8. Percentages     18.5%, 25%                  → "تمنتعش فاصلة خمسة بالمية"
+  3. Dates           31/01/2026, 15-3-2026       → "واحد وثلاثين يناير ..."
+  4. Times           7:35, 10:15, 6:45           → "الساعة سبعة وخمسة وثلاثين دقيقة"
+  5. Phone numbers   0550001234, +966...         → digit-by-digit
+  6. Alphanumeric    RJ402, AB1234               → "RJ أربعمية واثنين"
+  7. Currency syms   $245.75, 50﷼                → "ميتين ... دولار / ريال"
+  8. Percentages     18.5%, 25%                  → "ثمنطعش فاصلة خمسة بالمية"
   9. Grouped numbers 12,450.90                   → strips commas → float/int
- 10. Floats          2.5, 245.75                 → "اتنين فاصلة خمسة"
- 11. Integers        150, 2026, 900              → "مية وخمسين", "ألفين وستة وعشرين"
+ 10. Floats          2.5, 245.75                 → "اثنين فاصلة خمسة"
+ 11. Integers        150, 2026, 5645             → "مية وخمسين", "ألفين وستة وعشرين"
 
-All numbers are rendered in Levantine Arabic words.
+Eastern Arabic-Indic digits (٠١٢٣٤٥٦٧٨٩ / ۰-۹) are mapped to Western digits
+before any other rule, so "٣٥٤ ريال" is verbalized exactly like "354 ريال".
+
+All numbers are rendered in Saudi (Najdi/Gulf colloquial) Arabic words.
 
 Public API:
     normalize_entities(text) -> str    # the full pipeline
-    int_to_levantine(n) -> str
-    float_to_levantine("2.5") -> str
+    int_to_saudi(n) -> str
+    float_to_saudi("2.5") -> str
 """
 from __future__ import annotations
 
 import re
 
-# ── Digit / number maps ───────────────────────────────────────────────────────
+# ── Eastern Arabic-Indic digit folding (٠-٩ U+0660-0669, ۰-۹ U+06F0-06F9) ─────
+_EASTERN_DIGITS = str.maketrans(
+    "٠١٢٣٤٥٦٧٨٩" "۰۱۲۳۴۵۶۷۸۹" "٫٬",
+    "0123456789" "0123456789" ".,",
+)
+
+
+def fold_eastern_digits(text: str) -> str:
+    """Map Eastern Arabic-Indic digits (and ٫/٬ separators) to ASCII."""
+    return text.translate(_EASTERN_DIGITS)
+
+
+# ── Digit / number maps (Saudi colloquial) ────────────────────────────────────
 _DIGIT = {
-    "0": "صفر", "1": "واحد", "2": "اتنين", "3": "تلاتة", "4": "أربعة",
-    "5": "خمسة", "6": "ستة", "7": "سبعة", "8": "تمانية", "9": "تسعة",
+    "0": "صفر", "1": "واحد", "2": "اثنين", "3": "ثلاثة", "4": "أربعة",
+    "5": "خمسة", "6": "ستة", "7": "سبعة", "8": "ثمانية", "9": "تسعة",
 }
 _ONES = {
-    0: "", 1: "واحد", 2: "اتنين", 3: "تلاتة", 4: "أربعة", 5: "خمسة",
-    6: "ستة", 7: "سبعة", 8: "تمانية", 9: "تسعة", 10: "عشرة",
-    11: "إحدعش", 12: "اتناعش", 13: "تلتعش", 14: "أربعتعش", 15: "خمستعش",
-    16: "ستعش", 17: "سبعتعش", 18: "تمنتعش", 19: "تسعتعش",
+    0: "", 1: "واحد", 2: "اثنين", 3: "ثلاثة", 4: "أربعة", 5: "خمسة",
+    6: "ستة", 7: "سبعة", 8: "ثمانية", 9: "تسعة", 10: "عشرة",
+    11: "إحدعش", 12: "اثنعش", 13: "ثلثطعش", 14: "أربعطعش", 15: "خمسطعش",
+    16: "سطعش", 17: "سبعطعش", 18: "ثمنطعش", 19: "تسعطعش",
 }
 _TENS = {
-    2: "عشرين", 3: "تلاتين", 4: "أربعين", 5: "خمسين",
-    6: "ستين", 7: "سبعين", 8: "تمانين", 9: "تسعين",
+    2: "عشرين", 3: "ثلاثين", 4: "أربعين", 5: "خمسين",
+    6: "ستين", 7: "سبعين", 8: "ثمانين", 9: "تسعين",
 }
 _HUNDREDS = {
-    1: "مية", 2: "مئتين", 3: "تلتمية", 4: "أربعمية", 5: "خمسمية",
-    6: "ستمية", 7: "سبعمية", 8: "تمنمية", 9: "تسعمية",
+    1: "مية", 2: "ميتين", 3: "ثلثمية", 4: "أربعمية", 5: "خمسمية",
+    6: "ستمية", 7: "سبعمية", 8: "ثمنمية", 9: "تسعمية",
 }
+# Saudi Arabia uses Gregorian month names (يناير …), not Levantine (كانون …)
 _MONTHS = {
-    1: "كانون الثاني", 2: "شباط", 3: "آذار", 4: "نيسان", 5: "أيار",
-    6: "حزيران", 7: "تموز", 8: "آب", 9: "أيلول",
-    10: "تشرين الأول", 11: "تشرين الثاني", 12: "كانون الأول",
+    1: "يناير", 2: "فبراير", 3: "مارس", 4: "أبريل", 5: "مايو",
+    6: "يونيو", 7: "يوليو", 8: "أغسطس", 9: "سبتمبر",
+    10: "أكتوبر", 11: "نوفمبر", 12: "ديسمبر",
 }
 _CUR_SYM = {
     "$": "دولار", "€": "يورو", "£": "جنيه", "₪": "شيكل", "﷼": "ريال",
 }
 
 
-# ── Integer → Levantine words ─────────────────────────────────────────────────
-def int_to_levantine(n: int) -> str:
+# ── Integer → Saudi words ─────────────────────────────────────────────────────
+def int_to_saudi(n: int) -> str:
     if n == 0:
         return "صفر"
     if n < 0:
-        return "ناقص " + int_to_levantine(-n)
+        return "ناقص " + int_to_saudi(-n)
 
     parts: list[str] = []
 
@@ -70,8 +86,10 @@ def int_to_levantine(n: int) -> str:
             parts.append("مليون")
         elif m == 2:
             parts.append("مليونين")
+        elif 3 <= m <= 10:
+            parts.append(int_to_saudi(m) + " ملايين")
         else:
-            parts.append(int_to_levantine(m) + " مليون")
+            parts.append(int_to_saudi(m) + " مليون")
         n %= 1_000_000
 
     # thousands
@@ -82,9 +100,9 @@ def int_to_levantine(n: int) -> str:
         elif k == 2:
             parts.append("ألفين")
         elif 3 <= k <= 10:
-            parts.append(int_to_levantine(k) + " آلاف")
+            parts.append(int_to_saudi(k) + " آلاف")
         else:
-            parts.append(int_to_levantine(k) + " ألف")
+            parts.append(int_to_saudi(k) + " ألف")
         n %= 1_000
 
     # hundreds
@@ -103,24 +121,29 @@ def int_to_levantine(n: int) -> str:
     return " و".join(p for p in parts if p)
 
 
-# ── Float → Levantine words ───────────────────────────────────────────────────
-def float_to_levantine(s: str) -> str:
+# ── Float → Saudi words ───────────────────────────────────────────────────────
+def float_to_saudi(s: str) -> str:
     s = s.replace(",", "")
     if "." not in s:
-        return int_to_levantine(int(s or "0"))
+        return int_to_saudi(int(s or "0"))
     ip, dp = s.split(".", 1)
-    res = int_to_levantine(int(ip or "0")) + " فاصلة "
+    res = int_to_saudi(int(ip or "0")) + " فاصلة "
     # Leading-zero decimals (e.g. 1.05) read digit-by-digit; else as a number
     if dp.startswith("0") and len(dp) > 1:
         res += " ".join(_DIGIT[d] for d in dp if d in _DIGIT)
     else:
-        res += int_to_levantine(int(dp))
+        res += int_to_saudi(int(dp))
     return res
+
+
+# Backward-compatible aliases (older code imports the Levantine names)
+int_to_levantine   = int_to_saudi
+float_to_levantine = float_to_saudi
 
 
 def _num_to_words(s: str) -> str:
     s = s.replace(",", "")
-    return float_to_levantine(s) if "." in s else int_to_levantine(int(s))
+    return float_to_saudi(s) if "." in s else int_to_saudi(int(s))
 
 
 def _read_digits(s: str) -> str:
@@ -134,22 +157,22 @@ def _read_digits(s: str) -> str:
 
 
 # ── Date / time ───────────────────────────────────────────────────────────────
-def _date_to_levantine(d: str, mo: str, y: str) -> str:
+def _date_to_saudi(d: str, mo: str, y: str) -> str:
     d, mo, y = int(d), int(mo), int(y)
     # Assume DD/MM; swap if clearly MM/DD (first ≤12, second >12)
     if d <= 12 and mo > 12:
         d, mo = mo, d
     if y < 100:
         y += 2000 if y < 50 else 1900
-    day   = int_to_levantine(d)
-    month = _MONTHS.get(mo, int_to_levantine(mo))
-    year  = int_to_levantine(y)
+    day   = int_to_saudi(d)
+    month = _MONTHS.get(mo, int_to_saudi(mo))
+    year  = int_to_saudi(y)
     return f"{day} {month} {year}"
 
 
-def _time_to_levantine(h: str, m: str, with_prefix: bool = True) -> str:
+def _time_to_saudi(h: str, m: str, with_prefix: bool = True) -> str:
     h, m = int(h), int(m)
-    hour = int_to_levantine(h)
+    hour = int_to_saudi(h)
     pre  = "الساعة " if with_prefix else ""
     if m == 0:
         return pre + hour
@@ -159,18 +182,19 @@ def _time_to_levantine(h: str, m: str, with_prefix: bool = True) -> str:
         return pre + hour + " ونص"
     if m == 45:
         return pre + hour + " إلا ربع"
-    return pre + hour + " و" + int_to_levantine(m) + " دقيقة"
+    return pre + hour + " و" + int_to_saudi(m) + " دقيقة"
 
 
 # ── Abbreviations (safe, unambiguous only) ────────────────────────────────────
 _ABBREV = {
-    "كغ":   "كيلوغرام",
+    "كغ":   "كيلوجرام",
+    "كجم":  "كيلوجرام",
     "كم/س": "كيلومتر بالساعة",
     "ص.ب":  "صندوق بريد",
-    "د.أ":  "دينار أردني",
     "ر.س":  "ريال سعودي",
-    "ل.س":  "ليرة سورية",
-    "ل.ل":  "ليرة لبنانية",
+    "هـ":   "هجري",
+    "د.إ":  "درهم إماراتي",
+    "د.ك":  "دينار كويتي",
 }
 
 
@@ -289,12 +313,12 @@ def _normalize_english(text: str) -> str:
 
 
 # Arabic-letter detector → decides which normalizer to use
-_AR_LETTER = re.compile(r"[\u0600-\u06FF]")
+_AR_LETTER = re.compile(r"[؀-ۿ]")
 
 
 # ── Main pipeline ─────────────────────────────────────────────────────────────
 def _normalize_arabic(text: str) -> str:
-    """Levantine-Arabic entity normalization (URLs → integers)."""
+    """Saudi-Arabic entity normalization (URLs → integers)."""
 
     # 0. Abbreviations
     for abbr, full in _ABBREV.items():
@@ -312,21 +336,21 @@ def _normalize_arabic(text: str) -> str:
     text = _RE_EMAIL.sub(_email_repl, text)
 
     # 3. Dates
-    text = _RE_DATE.sub(lambda m: " " + _date_to_levantine(*m.groups()) + " ", text)
+    text = _RE_DATE.sub(lambda m: " " + _date_to_saudi(*m.groups()) + " ", text)
 
     # 4. Times — avoid double "الساعة" when the word already precedes the time
     def _time_repl(m):
         start = m.start()
         before = text[max(0, start - 8):start]
         has_prefix = "الساعة" in before or "ساعة" in before
-        return " " + _time_to_levantine(m.group(1), m.group(2), with_prefix=not has_prefix) + " "
+        return " " + _time_to_saudi(m.group(1), m.group(2), with_prefix=not has_prefix) + " "
     text = _RE_TIME.sub(_time_repl, text)
 
     # 5. Phone numbers
     text = _RE_PHONE.sub(lambda m: " " + _read_digits(m.group(0)) + " ", text)
 
     # 6. Alphanumeric codes (keep letters, verbalize trailing digits)
-    text = _RE_CODE.sub(lambda m: m.group(1) + " " + int_to_levantine(int(m.group(2))), text)
+    text = _RE_CODE.sub(lambda m: m.group(1) + " " + int_to_saudi(int(m.group(2))), text)
 
     # 7. Currency symbols
     text = _RE_CURSYM1.sub(lambda m: _num_to_words(m.group(2)) + " " + _CUR_SYM[m.group(1)], text)
@@ -339,10 +363,10 @@ def _normalize_arabic(text: str) -> str:
     text = _RE_GROUP.sub(lambda m: _num_to_words(m.group(0)), text)
 
     # 10. Floats
-    text = _RE_FLOAT.sub(lambda m: float_to_levantine(m.group(0)), text)
+    text = _RE_FLOAT.sub(lambda m: float_to_saudi(m.group(0)), text)
 
     # 11. Integers
-    text = _RE_INT.sub(lambda m: int_to_levantine(int(m.group(0))), text)
+    text = _RE_INT.sub(lambda m: int_to_saudi(int(m.group(0))), text)
 
     # Collapse extra whitespace introduced by replacements
     text = re.sub(r"\s+", " ", text).strip()
@@ -353,9 +377,13 @@ def _normalize_arabic(text: str) -> str:
 def normalize_entities(text: str) -> str:
     """
     Normalize numeric / structured entities, choosing the language automatically:
-      - Text containing Arabic letters → Levantine Arabic verbalization
+      - Text containing Arabic letters → Saudi Arabic verbalization
       - Pure-English text             → English verbalization
+
+    Eastern Arabic-Indic digits are folded to Western digits first, so
+    "عندي ٣٥٤ ريال" and "عندي 354 ريال" produce identical output.
     """
+    text = fold_eastern_digits(text)
     if _AR_LETTER.search(text):
         return _normalize_arabic(text)
     return _normalize_english(text)

@@ -1,4 +1,4 @@
-"""Fine-tune XTTS-v2 on Levantine Arabic / English code-switching data."""
+"""Fine-tune XTTS-v2 on Saudi Arabic / English code-switching data."""
 
 # ╔══════════════════════ CONFIGURATION ════════════════════════════════════════╗
 CONFIG_FILE        = "configs/finetune_xtts.yaml"   # training config
@@ -29,8 +29,8 @@ except ImportError:
 def _banner():
     if console:
         console.print(Panel(
-            "[bold cyan]🎙️  Leva-TTS  ·  XTTS-v2 Fine-tuning[/bold cyan]\n"
-            "[dim]Levantine Arabic / English Code-Switching TTS[/dim]",
+            "[bold cyan]🎙️  Saudi-TTS  ·  XTTS-v2 Fine-tuning[/bold cyan]\n"
+            "[dim]Saudi Arabic / English Code-Switching TTS[/dim]",
             border_style="cyan", padding=(1, 4),
         ))
         console.print(f"  📄 Config : [yellow]{CONFIG_FILE}[/yellow]")

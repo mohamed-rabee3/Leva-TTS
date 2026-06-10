@@ -1,6 +1,6 @@
 [
   {
-    "speaker_id": "spk_01_male",
+    "speaker_id": "hoda",
     "audio_path": "reference_audios/hoda.wav",
     "reference_text": "ياخي وش دعوة، صدقني ما يخالف لو نسوي skip للـ meeting حق اليوم، لأن هقوتي إن الـ update الأخير في الـ system يبيله focus مرّة عالي من التيم كله، والـ deadline حق الـ project ترا قرّب يا بعد راسي، فتكفى خلنا نخلص الـ tasks اللي علينا الحين عشان نقدر نروّق بالويكند بدون ما يبلشنا الـ manager بإيميلات تالي الليل.",
     "gender": "female"

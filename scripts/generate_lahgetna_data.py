@@ -1,13 +1,15 @@
 """
-Generate synthetic Levantine Arabic audio using Lahgtna-OmniVoice.
+Generate synthetic Saudi Arabic audio using Lahgtna-OmniVoice.
 
 Model : oddadmix/lahgtna-omnivoice-v2
 Repo  : https://github.com/Oddadmix/Lahgtna-OmniVoice
 
-Multi-GPU support: speakers are split into contiguous chunks across GPUs.
-  - GPUS = "0,1,2,3"  → 4 GPUs run in parallel
-  - 10 speakers / 4 GPUs = GPU0: spk 0-2, GPU1: spk 3-5, GPU2: spk 6-7, GPU3: spk 8-9
-  - Each GPU generates its speakers simultaneously → max wait = ceil(10/4)=3 speakers
+Single-speaker setup: all 50K sentences are voiced by "hoda"
+(reference_audios/hoda.wav) in Najdi/Saudi Arabic (ISO 639-3: ars,
+203 h in the OmniVoice training mix — the best-covered Saudi variety).
+
+Multi-GPU support is kept (speakers split into contiguous chunks across
+GPUs), but with one speaker and one GPU it simply runs a single process.
 
 Usage
 -----
@@ -23,14 +25,14 @@ Output
 # ╔══════════════════════════════════════════════════════════════════════════╗
 #                            CONFIGURATION
 # ╚══════════════════════════════════════════════════════════════════════════╝
-SENTENCES_FILE        = "data/levantine_50k.txt"
+SENTENCES_FILE        = "data/saudi_50k.txt"
 REFERENCES_JSON       = "reference_audios/references.json"
 OUTPUT_DIR            = "data/synthetic_data"
 
 MODEL_ID              = "oddadmix/lahgtna-omnivoice-v2"
-LANGUAGE              = "apc"           # Levantine Arabic
-GPUS                  = "0,1,2,3"      # comma-separated GPU IDs to use in parallel
-SENTENCES_PER_SPEAKER = 5_000          # 10 speakers × 5000 = 50 000 total
+LANGUAGE              = "ars"          # Najdi (Saudi) Arabic; acw = Hijazi
+GPUS                  = "0"            # comma-separated GPU IDs to use in parallel
+SENTENCES_PER_SPEAKER = 50_000         # 1 speaker (hoda) × 50 000 = 50 000 total
 
 RESUME                = True            # skip already-generated WAVs
 # ╚══════════════════════════════════════════════════════════════════════════╝
@@ -51,7 +53,7 @@ from tqdm import tqdm
 def load_sentences(path: str) -> list:
     p = Path(path)
     if not p.exists():
-        print(f"[ERR] {path} not found. Run: python scripts/gather_levantine_text.py")
+        print(f"[ERR] {path} not found. Run: python scripts/gather_saudi_text.py")
         sys.exit(1)
     lines = [l.strip() for l in p.read_text(encoding="utf-8").splitlines() if l.strip()]
     return lines

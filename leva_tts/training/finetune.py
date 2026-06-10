@@ -1,5 +1,5 @@
 """
-XTTS-v2 fine-tuning script for Levantine Arabic / English code-switching TTS.
+XTTS-v2 fine-tuning script for Saudi Arabic / English code-switching TTS.
 """
 from __future__ import annotations
 
@@ -212,9 +212,9 @@ def run_finetuning(cfg_path: str):
         epochs              = EPOCHS,
         output_path         = str(output_path),
         model_args          = model_args,
-        run_name            = cfg.get("run_name",    "leva_xtts_ft"),
-        project_name        = cfg.get("project_name", "leva-tts"),
-        run_description     = "Levantine Arabic / English code-switching XTTS-v2",
+        run_name            = cfg.get("run_name",    "saudi_xtts_ft"),
+        project_name        = cfg.get("project_name", "saudi-tts"),
+        run_description     = "Saudi Arabic / English code-switching XTTS-v2",
         dashboard_logger    = cfg.get("dashboard_logger", "tensorboard"),
         audio               = audio_config,
         batch_size          = BATCH_SIZE,

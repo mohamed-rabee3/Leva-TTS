@@ -1,6 +1,6 @@
-# ─── XTTS-v2 Fine-tune Configuration ─────────────────────────────────────────
-run_name: leva_xtts_ft
-project_name: leva-tts
+# ─── XTTS-v2 Fine-tune Configuration (Saudi Arabic) ──────────────────────────
+run_name: saudi_xtts_ft
+project_name: saudi-tts
 output_path: ./checkpoints
 
 # Pre-trained XTTS-v2 weights (auto-downloaded from HuggingFace)
@@ -8,8 +8,8 @@ pretrained_model: tts_models/multilingual/multi-dataset/xtts_v2
 
 # ─── Data ─────────────────────────────────────────────────────────────────────
 datasets:
-  # ── Lahgtna synthetic (primary — 50K high-quality Levantine + CS) ────────
-  - name: synthetic_levantine
+  # ── Lahgtna synthetic (primary — 50K Saudi + CS + numbers, speaker hoda) ──
+  - name: synthetic_saudi
     path: ./data/processed/synthetic
     meta_file: metadata.csv
     language: ar
@@ -23,7 +23,7 @@ datasets:
     formatter: leva_tts
 
 # Reference speaker WAV (used during eval synthesis)
-speaker_reference: ./reference_audios/Saad.wav
+speaker_reference: ./reference_audios/hoda.wav
 eval_language: ar
 
 # ─── Training ─────────────────────────────────────────────────────────────────
@@ -75,13 +75,15 @@ model_args:
 
 # ─── Test sentences generated every plot_step ─────────────────────────────────
 test_sentences:
-  - text: "كيفك اليوم؟ إنت شو عم تعمل؟"
+  - text: "كيفك اليوم؟ وش قاعد تسوي؟"
     language: ar
   - text: "Hello, how are you doing today?"
     language: en
-  - text: "هلق أنا عندي مشوار كتير مهم بكرا"
+  - text: "الحين عندي مشوار مرة مهم بكرة"
     language: ar
-  - text: "من فترة طويلة ما شفت أصحاب الجامعة، وكل واحد صار مشغول بحياته وشغله، بس كل ما نتذكّر أيام الدراسة منضحك عالقصص اللي كانت تصير معنا وكأنها مبارح مو من سنين."
+  - text: "من زمان ما شفت ربعي بالجامعة، وكل واحد صار مشغول بحياته وشغله، بس كل ما نتذكر أيام الدراسة نضحك على السوالف اللي كانت تصير معنا وكأنها أمس مو من سنين."
     language: ar
-  - text: "بدي أحكيلك عن the new project اللي عم نشتغل عليه"
+  - text: "أبغى أقول لك عن the new project اللي قاعدين نشتغل عليه"
+    language: ar
+  - text: "دفعت ثلثمية وأربعة وخمسين ريال والباقي خمسة آلاف وستمية وخمسة وأربعين"
     language: ar
