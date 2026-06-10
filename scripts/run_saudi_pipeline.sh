@@ -48,6 +48,16 @@ if [ "$ROWS" -lt 45000 ]; then
     exit 1
 fi
 
+# Free disk for checkpoints: drop re-downloadable LibriSpeech raw copies
+# (only after processed English data verifiably exists)
+EN_ROWS=$(wc -l < data/processed/librispeech/metadata.csv 2>/dev/null || echo 0)
+if [ "$EN_ROWS" -gt 1000 ]; then
+    echo "[$(ts)] Cleaning LibriSpeech raw caches (processed rows: $EN_ROWS) …"
+    rm -rf data/raw/librispeech_hf
+    rm -rf ~/.cache/huggingface/hub/datasets--openslr--librispeech_asr
+fi
+df -h / | tail -1
+
 # 4. Fine-tune XTTS-v2
 echo "[$(ts)] Starting XTTS-v2 fine-tuning …"
 $PY scripts/train.py
