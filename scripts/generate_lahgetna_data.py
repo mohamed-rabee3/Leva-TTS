@@ -8,18 +8,18 @@ Single-speaker setup: all 50K sentences are voiced by "hoda"
 (reference_audios/hoda.wav) in Najdi/Saudi Arabic (ISO 639-3: ars,
 203 h in the OmniVoice training mix — the best-covered Saudi variety).
 
-Multi-GPU support is kept (speakers split into contiguous chunks across
-GPUs), but with one speaker and one GPU it simply runs a single process.
+WAVs are uploaded to HF_DATASET_REPO in batches of UPLOAD_BATCH_SIZE and
+deleted locally immediately after upload to keep disk usage near zero.
+metadata.csv is kept locally (tiny) and uploaded at the end.
 
 Usage
 -----
-  pip install git+https://github.com/Oddadmix/Lahgtna-OmniVoice.git
   python scripts/generate_lahgetna_data.py
 
-Output
-------
-  data/synthetic_data/wavs/<spk_id>/<spk_id>_<idx:07d>.wav
-  data/synthetic_data/metadata.csv   (wav_rel_path|transcript)
+Output (on HuggingFace)
+-----------------------
+  HF_DATASET_REPO/wavs/<spk_id>/<spk_id>_<idx:07d>.wav
+  HF_DATASET_REPO/metadata.csv   (wav_rel_path|transcript)
 """
 
 # ╔══════════════════════════════════════════════════════════════════════════╗
@@ -35,6 +35,10 @@ GPUS                  = "0"            # comma-separated GPU IDs to use in paral
 SENTENCES_PER_SPEAKER = 50_000         # 1 speaker (hoda) × 50 000 = 50 000 total
 
 RESUME                = True            # skip already-generated WAVs
+
+# HuggingFace streaming upload — WAVs are deleted locally after each batch
+HF_DATASET_REPO       = "Rabe3/saudi-tts-synthetic"   # dataset repo (created if absent)
+UPLOAD_BATCH_SIZE     = 500            # upload + delete every N WAVs (~100-150 MB/batch)
 # ╚══════════════════════════════════════════════════════════════════════════╝
 
 import csv
@@ -46,6 +50,7 @@ from pathlib import Path
 import soundfile as sf
 import torch
 from tqdm import tqdm
+from huggingface_hub import HfApi, CommitOperationAdd
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -127,6 +132,38 @@ def merge_metadata(gpu_ids: list, out_dir: Path):
     return total
 
 
+# ── HuggingFace upload helper ─────────────────────────────────────────────────
+
+def hf_ensure_repo(api: HfApi, repo_id: str):
+    try:
+        api.repo_info(repo_id=repo_id, repo_type="dataset")
+    except Exception:
+        api.create_repo(repo_id=repo_id, repo_type="dataset", private=False)
+        print(f"[HF] Created dataset repo: {repo_id}")
+
+
+def hf_upload_and_purge(batch: list, api: HfApi, repo_id: str, gpu_id: int):
+    """Upload a list of (wav_abs, path_in_repo) tuples to HF, then delete locally."""
+    if not batch:
+        return
+    operations = [
+        CommitOperationAdd(path_in_repo=repo_path, path_or_fileobj=str(wav_abs))
+        for wav_abs, repo_path in batch
+    ]
+    try:
+        api.create_commit(
+            repo_id=repo_id,
+            repo_type="dataset",
+            operations=operations,
+            commit_message=f"Add {len(batch)} WAVs (GPU {gpu_id})",
+        )
+        for wav_abs, _ in batch:
+            wav_abs.unlink(missing_ok=True)
+        tqdm.write(f"[GPU {gpu_id}] ↑ Uploaded & purged {len(batch)} WAVs → {repo_id}")
+    except Exception as exc:
+        tqdm.write(f"[GPU {gpu_id}] WARN upload failed ({str(exc)[:100]}) — WAVs kept locally")
+
+
 # ── Per-GPU worker (runs in its own process) ──────────────────────────────────
 
 def generate_for_gpu(
@@ -156,6 +193,10 @@ def generate_for_gpu(
     print(f"[GPU {gpu_id}] Model ready (SR={SR} Hz) — "
           f"handling {len(spk_chunk)} speaker(s): "
           f"{[r['speaker_id'] for _, r in spk_chunk]}")
+
+    api = HfApi()
+    hf_ensure_repo(api, HF_DATASET_REPO)
+    upload_buffer: list = []   # [(wav_abs, path_in_repo), ...]
 
     # Per-GPU metadata file (avoids write conflicts between processes)
     part_meta_path = out_dir / f"metadata_gpu{gpu_id}.csv"
@@ -239,7 +280,12 @@ def generate_for_gpu(
                     writer.writerow([wav_rel, text])
                     fh.flush()
                     done.add(wav_rel)
+                    upload_buffer.append((wav_abs, wav_rel))
                     gen += 1
+
+                    if len(upload_buffer) >= UPLOAD_BATCH_SIZE:
+                        hf_upload_and_purge(upload_buffer, api, HF_DATASET_REPO, gpu_id)
+                        upload_buffer.clear()
                 except Exception as exc:
                     tqdm.write(f"[GPU {gpu_id}] WARN idx={g_idx}  {str(exc)[:80]}")
                     err += 1
@@ -253,6 +299,11 @@ def generate_for_gpu(
               f"{err} errors | {rate:.1f} utt/s | {spk_elapsed/60:.1f} min")
         gpu_generated += gen
         gpu_errors    += err
+
+    # Flush any remaining WAVs that didn't fill a full batch
+    if upload_buffer:
+        hf_upload_and_purge(upload_buffer, api, HF_DATASET_REPO, gpu_id)
+        upload_buffer.clear()
 
     fh.close()
     gpu_elapsed = time.perf_counter() - gpu_start
@@ -329,10 +380,27 @@ if __name__ == "__main__":
     wall_elapsed = time.perf_counter() - wall_start
     dur_est      = total * 5 / 3600
 
+    # Upload final metadata.csv to HF
+    meta_path = out_dir / "metadata.csv"
+    if meta_path.exists():
+        try:
+            api = HfApi()
+            api.upload_file(
+                path_or_fileobj=str(meta_path),
+                path_in_repo="metadata.csv",
+                repo_id=HF_DATASET_REPO,
+                repo_type="dataset",
+                commit_message="Final metadata.csv",
+            )
+            print(f"  Metadata uploaded → {HF_DATASET_REPO}/metadata.csv")
+        except Exception as exc:
+            print(f"  WARN metadata upload failed: {exc}")
+
     print(f"\n{'='*60}")
     print(f"  DONE")
     print(f"  Total utterances : {total:,}")
     print(f"  Wall time        : {wall_elapsed/60:.1f} min")
     print(f"  ~Audio duration  : {dur_est:.1f} h  (est. 5 s avg)")
     print(f"  Metadata         : {out_dir}/metadata.csv")
+    print(f"  HF dataset       : https://huggingface.co/datasets/{HF_DATASET_REPO}")
     print(f"{'='*60}\n")
