@@ -29,7 +29,7 @@ SENTENCES_FILE        = "data/saudi_50k.txt"
 REFERENCES_JSON       = "reference_audios/references.json"
 OUTPUT_DIR            = "data/synthetic_data"
 
-MODEL_ID              = "oddadmix/lahgtna-omnivoice-v2"
+MODEL_ID              = "Rabe3/lahgtna-omnivoice-v2"   # mirror of oddadmix/lahgtna-omnivoice-v2
 LANGUAGE              = "ars"          # Najdi (Saudi) Arabic; acw = Hijazi
 GPUS                  = "0"            # comma-separated GPU IDs to use in parallel
 SENTENCES_PER_SPEAKER = 50_000         # 1 speaker (hoda) × 50 000 = 50 000 total

@@ -3,7 +3,7 @@ import pytest
 
 from leva_tts.text.processor import TextProcessor
 from leva_tts.text.normalizer import (
-    normalize_entities, int_to_levantine, int_to_english, float_to_english,
+    normalize_entities, int_to_saudi, int_to_english, float_to_english,
 )
 
 
@@ -22,10 +22,17 @@ def test_processor_idempotent_type(tp):
 
 
 def test_arabic_number_verbalization():
-    assert int_to_levantine(0) == "صفر"
-    assert int_to_levantine(3) == "تلاتة"
-    assert int_to_levantine(100) == "مية"
-    assert int_to_levantine(2026) == "ألفين وستة وعشرين"
+    assert int_to_saudi(0) == "صفر"
+    assert int_to_saudi(3) == "ثلاثة"
+    assert int_to_saudi(100) == "مية"
+    assert int_to_saudi(2026) == "ألفين وستة وعشرين"
+    assert int_to_saudi(354) == "ثلثمية وأربعة وخمسين"
+
+
+def test_eastern_arabic_digits():
+    out = normalize_entities("عندي ٣٥٤ ريال")
+    assert "٣٥٤" not in out
+    assert "ثلثمية وأربعة وخمسين" in out
 
 
 def test_english_number_verbalization():
@@ -56,6 +63,6 @@ def test_no_double_saa3a():
 
 
 def test_long_text_does_not_crash(tp):
-    long = "اليوم بتاريخ 15 كانون الثاني 2026 صحيت الساعة 7:35. " * 10
+    long = "اليوم بتاريخ 15 يناير 2026 صحيت الساعة 7:35. " * 10
     out = tp.process(long)
     assert isinstance(out, str) and len(out) > 0
