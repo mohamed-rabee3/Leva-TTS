@@ -1,62 +1,8 @@
 [
   {
     "speaker_id": "spk_01_male",
-    "audio_path": "reference_audios/Badr.wav",
-    "reference_text": "بصراحة كنت عم حضّر لل meeting من مبارح، بس كل شوي بيطلع issue جديد بال system وبيضطرني أرجع أعمل debugging من أول وجديد.",
-    "gender": "male"
-  },
-  {
-    "speaker_id": "spk_02_male",
-    "audio_path": "reference_audios/Mohamed.wav",
-    "reference_text": "اليوم الصبح صحيت بكّير على غير العادة، وعملت فنجان قهوة وقعدت شوي بالبلكونة عم شوف الناس رايحة وجاية، وحسّيت إنو الجو هادي بطريقة غريبة وخلاني أفكر بكم شغلة كنت مأجلها من زمان.",
-    "gender": "male"
-  },
-  {
-    "speaker_id": "spk_03_male",
-    "audio_path": "reference_audios/Saad.wav",
-    "reference_text": "بدي احكيلك شغلة كتير مهمة، أنا مبارح كنت راجع عالبيت متأخر، والطريق كان زحمة بشكل مو طبيعي، فقلت لحالي خلّيني أمرّ اجيب قهوة يمكن أصحصح شوي قبل ما أوصل.",
-    "gender": "male"
-  },
-  {
-    "speaker_id": "spk_04_male",
-    "audio_path": "reference_audios/Rami.mp3",
-    "reference_text": "بصراحة ال feedback اللي إجاني من ال manager كان منيح، بس طلب منّي أضيف more details بال report وأشرح ال results بشكل أوضح.",
-    "gender": "male"
-  },
-  {
-    "speaker_id": "spk_05_male",
-    "audio_path": "reference_audios/Fadi.mp3",
-    "reference_text": "إذا بتسألني عن أحسن وقت بالشّتوية، بقولك لما تكون الدنيا برد برا وإنت قاعد بالبيت، مع فنجان شاي سخن أو قهوة، وعم تحضر فيلم قديم أو تسمع أغاني بتحبها من زمان.",
-    "gender": "male"
-  },
-  {
-    "speaker_id": "spk_06_female",
-    "audio_path": "reference_audios/Amina.wav",
-    "reference_text": "إذا عنجد ناوي تغيّر شغلك بهالفترة، لازم تقعد مع حالك شوي وتفكّر منيح إذا القرار مناسب إلك عالمدى الطويل، لأنو مو كل فرصة جديدة بتكون أحسن من اللي إنت فيه هلق.",
-    "gender": "female"
-  },
-  {
-    "speaker_id": "spk_07_female",
-    "audio_path": "reference_audios/Fatma.wav",
-    "reference_text": "إذا فينا نعمل quick call اليوم بالليل ونراجع ال roadmap سوا، بكون أحسن قبل ما نبلّش implementation الأسبوع الجاي.",
-    "gender": "female"
-  },
-  {
-    "speaker_id": "spk_08_female",
-    "audio_path": "reference_audios/Lamyaa.wav",
-    "reference_text": "لك بصراحة، أكتر شي بضايقني إنو الواحد أحيانًا بيخطط لكل التفاصيل وبيكون متحمّس كتير، وبعدين فجأة بصير شي بسيط بيغيّر كل الخطة وبيضطر يعيد حساباته من أول وجديد.",
-    "gender": "female"
-  },
-  {
-    "speaker_id": "spk_09_female",
-    "audio_path": "reference_audios/Mona.wav",
-    "reference_text": "مرة كنا طالعين رحلة مع الشباب عالجبل، وكل الطريق كنا نضحك ونمزح، بس لما وصلنا اكتشفنا إنو نص الأغراض المهمة ضايلة بالبيت، فصرنا نرتجل أي حل مشان يزبط اليوم وما يروح عالفاضي.",
-    "gender": "female"
-  },
-  {
-    "speaker_id": "spk_10_female",
-    "audio_path": "reference_audios/Haneen.mp3",
-    "reference_text": "تخيّل إنو من كم سنة كنا نفكر إنو التكنولوجيا لهالدرجة المتطورة بس بالأفلام، وهلّق صار الواحد بيحكي مع الذكاء الاصطناعي وكأنو عم يحكي مع شخص طبيعي وبيساعده بالشغل والدراسة وكل شي تقريبًا.",
+    "audio_path": "reference_audios/hoda.wav",
+    "reference_text": "ياخي وش دعوة، صدقني ما يخالف لو نسوي skip للـ meeting حق اليوم، لأن هقوتي إن الـ update الأخير في الـ system يبيله focus مرّة عالي من التيم كله، والـ deadline حق الـ project ترا قرّب يا بعد راسي، فتكفى خلنا نخلص الـ tasks اللي علينا الحين عشان نقدر نروّق بالويكند بدون ما يبلشنا الـ manager بإيميلات تالي الليل.",
     "gender": "female"
   }
 ]
