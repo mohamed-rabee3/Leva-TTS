@@ -15,12 +15,13 @@ datasets:
     language: ar
     formatter: leva_tts
 
-  # ── LibriSpeech train-clean-100 (English, capped to 20 h) ────────────────
-  - name: librispeech_en
-    path: ./data/processed/librispeech
-    meta_file: metadata.csv
-    language: en
-    formatter: leva_tts
+  # LibriSpeech not needed — XTTS-v2 retains English from pre-training,
+  # and CS samples (~12k) in the synthetic set cover English phonemes.
+  # - name: librispeech_en
+  #   path: ./data/processed/librispeech
+  #   meta_file: metadata.csv
+  #   language: en
+  #   formatter: leva_tts
 
 # Reference speaker WAV (used during eval synthesis)
 speaker_reference: ./reference_audios/hoda.wav
@@ -51,12 +52,13 @@ lr_scheduler_params:
   last_epoch: -1
 
 # ─── Logging / Checkpointing ──────────────────────────────────────────────────
-dashboard_logger: tensorboard
+dashboard_logger: wandb
 print_step: 50
 plot_step: 200
-log_model_step: 1000
+log_model_step: 999999
 save_step: 2000
-save_n_checkpoints: 3
+save_n_checkpoints: 1
+save_checkpoints: false
 
 # ─── Audio ────────────────────────────────────────────────────────────────────
 audio:

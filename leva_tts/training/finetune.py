@@ -11,7 +11,7 @@ from typing import Dict, List, Optional
 
 import yaml
 from omegaconf import OmegaConf
-from torch.utils.tensorboard import SummaryWriter
+import wandb
 
 # ── Patched XttsAudioConfig ───────────────────────────────────────────────────
 # GPTTrainer.__init__ (line 195) accesses config.audio.dvae_sample_rate which
@@ -146,12 +146,27 @@ def run_finetuning(cfg_path: str):
     mel_norm_path  = _ensure_asset(xtts_dir, "mel_stats.pth")
     dvae_path      = _ensure_asset(xtts_dir, "dvae.pth")
 
-    # ── TensorBoard writer ────────────────────────────────────────────────────
-    tb_dir = output_path / "tensorboard"
-    tb_dir.mkdir(exist_ok=True)
-    tb_writer = SummaryWriter(log_dir=str(tb_dir))
-    logger.info(f"TensorBoard logs → {tb_dir}")
-    logger.info(f"  Run:  tensorboard --logdir {tb_dir}")
+    # ── W&B init ─────────────────────────────────────────────────────────────
+    BATCH_SIZE  = cfg.get("batch_size",       4)
+    GRAD_ACCUM  = cfg.get("grad_accum_steps", 8)
+    EPOCHS      = cfg.get("epochs",           30)
+    wandb.init(
+        project = cfg.get("project_name", "saudi-tts"),
+        name    = cfg.get("run_name",     "saudi_xtts_ft"),
+        config  = {
+            "epochs":              EPOCHS,
+            "batch_size":          BATCH_SIZE,
+            "grad_accum_steps":    GRAD_ACCUM,
+            "effective_batch":     BATCH_SIZE * GRAD_ACCUM,
+            "lr":                  float(cfg.get("lr", 5e-6)),
+            "optimizer":           cfg.get("optimizer", "AdamW"),
+            "lr_scheduler":        cfg.get("lr_scheduler", "MultiStepLR"),
+            "sample_rate":         cfg.get("audio", {}).get("sample_rate", 22050),
+            "datasets":            [d["name"] for d in cfg.get("datasets", [])],
+        },
+        resume  = "allow",
+    )
+    logger.info(f"W&B run: {wandb.run.url}")
 
     # ── GPT model args ────────────────────────────────────────────────────────
     # Must use GPTArgs (not bare XttsArgs) — GPTTrainer checks xtts_checkpoint,
@@ -202,9 +217,6 @@ def run_finetuning(cfg_path: str):
     ]
 
     # ── GPTTrainerConfig ──────────────────────────────────────────────────────
-    BATCH_SIZE  = cfg.get("batch_size",       4)
-    GRAD_ACCUM  = cfg.get("grad_accum_steps", 8)
-    EPOCHS      = cfg.get("epochs",           30)
     opt         = cfg.get("optimizer_params", {})
     sch         = cfg.get("lr_scheduler_params", {})
 
@@ -215,7 +227,7 @@ def run_finetuning(cfg_path: str):
         run_name            = cfg.get("run_name",    "saudi_xtts_ft"),
         project_name        = cfg.get("project_name", "saudi-tts"),
         run_description     = "Saudi Arabic / English code-switching XTTS-v2",
-        dashboard_logger    = cfg.get("dashboard_logger", "tensorboard"),
+        dashboard_logger    = cfg.get("dashboard_logger", "wandb"),
         audio               = audio_config,
         batch_size          = BATCH_SIZE,
         batch_group_size    = 48,
@@ -228,7 +240,7 @@ def run_finetuning(cfg_path: str):
         log_model_step      = cfg.get("log_model_step", 1000),
         save_step           = cfg.get("save_step",   2000),
         save_n_checkpoints  = cfg.get("save_n_checkpoints", 3),
-        save_checkpoints    = True,
+        save_checkpoints    = cfg.get("save_checkpoints", False),
         target_loss         = "loss",
         print_eval          = False,
         optimizer           = cfg.get("optimizer", "AdamW"),
@@ -255,9 +267,8 @@ def run_finetuning(cfg_path: str):
     logger.info("Model initialised.")
 
     # ── Load training samples ─────────────────────────────────────────────────
-    # Register our custom formatter in TTS.tts.datasets (where _get_formatter_by_name looks)
-    import sys as _sys
-    _sys.modules["TTS.tts.datasets"].leva_tts = _leva_tts_formatter
+    from TTS.tts.datasets.formatters import register_formatter
+    register_formatter("leva_tts", _leva_tts_formatter)
 
     train_samples, eval_samples = load_tts_samples(
         gpt_config.datasets,
@@ -283,7 +294,59 @@ def run_finetuning(cfg_path: str):
         # callbacks omitted — uses Trainer default (empty); TensorBoard via dashboard_logger
     )
 
+    # Patch checkpoint saves to avoid running out of disk space.
+    # Each checkpoint is ~5.3 GB; the default behaviour writes new then deletes
+    # old, requiring 2× free space. We pre-delete before every write instead.
+    # best_model.pth is created as a symlink (not a 5.3 GB copy).
+    import trainer.trainer as _trainer_mod
+    import trainer.io as _trainer_io
+    from trainer.io import sort_checkpoints
+    import fsspec, os
+
+    def _pre_delete_pths(output_folder):
+        """Delete all .pth files in the run directory before writing a new one."""
+        fs = fsspec.get_mapper(str(output_folder)).fs
+        for f in fs.glob(os.path.join(str(output_folder), "*.pth")):
+            fs.rm(f)
+            logger.info(f"Pre-deleted to free disk space: {f}")
+
+    _orig_save = _trainer_mod.save_checkpoint
+    def _disk_safe_save(config, model, output_folder, *, current_step, epoch,
+                        save_n_checkpoints=None, **kwargs):
+        _pre_delete_pths(output_folder)
+        _orig_save(config, model, output_folder, current_step=current_step,
+                   epoch=epoch, save_n_checkpoints=None, **kwargs)  # skip built-in cleanup
+    _trainer_mod.save_checkpoint = _disk_safe_save
+
+    _orig_save_best = _trainer_mod.save_best_model
+    def _disk_safe_save_best(current_loss, best_loss, config, model, out_path, *,
+                             current_step, epoch, **kwargs):
+        # Determine if this will actually save before deleting anything
+        if isinstance(current_loss, dict) and isinstance(best_loss, dict):
+            el, bl = current_loss.get("eval_loss"), best_loss.get("eval_loss")
+            will_save = (el < bl) if (el is not None and bl is not None) \
+                        else current_loss.get("train_loss", float("inf")) < best_loss.get("train_loss", float("inf"))
+        else:
+            will_save = float(current_loss) < float(best_loss)
+
+        if will_save:
+            _pre_delete_pths(out_path)
+
+        result = _orig_save_best(current_loss, best_loss, config, model, out_path,
+                                 current_step=current_step, epoch=epoch, **kwargs)
+
+        # Replace the 5.3 GB best_model.pth copy with a symlink to save disk space
+        shortcut = os.path.join(str(out_path), "best_model.pth")
+        versioned = os.path.join(str(out_path), f"best_model_{current_step}.pth")
+        if os.path.isfile(shortcut) and os.path.isfile(versioned) and not os.path.islink(shortcut):
+            os.remove(shortcut)
+            os.symlink(versioned, shortcut)
+            logger.info(f"Replaced best_model.pth copy with symlink → {versioned}")
+
+        return result
+    _trainer_mod.save_best_model = _disk_safe_save_best
+
     logger.info("Starting fine-tuning …")
     trainer.fit()
-    tb_writer.close()
+    wandb.finish()
     logger.info("Fine-tuning complete.")

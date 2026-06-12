@@ -1,0 +1,1 @@
+{"_runtime":2150.389275887,"TrainIterStats/step_time":0.089,"TrainIterStats/current_lr":5e-06,"_step":10800,"TrainIterStats/loss_text_ce":0.037806060165166855,"_timestamp":1.7812006879125278e+09,"TrainIterStats/loader_time":0.0076,"TrainIterStats/loss":0.37409913539886475,"_wandb":{"runtime":2150},"TrainIterStats/loss_mel_ce":2.954987049102783}

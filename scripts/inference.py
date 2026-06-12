@@ -75,8 +75,10 @@ def _extract_name(spk_id: str, audio_path: str) -> str:
 
 def find_best_checkpoint(ckpt_dir: str) -> str | None:
     p = Path(ckpt_dir)
-    # Prefer best_model.pth
-    bests = sorted(p.rglob("best_model.pth"), key=lambda f: f.stat().st_mtime)
+    if p.is_file():
+        return str(p)
+    # Prefer best_model.pth or best_model_<step>.pth
+    bests = sorted(p.rglob("best_model*.pth"), key=lambda f: f.stat().st_mtime)
     if bests:
         return str(bests[-1])
     pths = sorted(p.rglob("*.pth"), key=lambda f: f.stat().st_mtime)
@@ -99,23 +101,19 @@ def load_engine(checkpoint: str, device: str):
     model = Xtts.init_from_config(config)
     model.load_checkpoint(config, checkpoint_dir=str(xtts_dir), eval=True)
 
-    # Load fine-tuned GPT weights
+    # Load fine-tuned weights (full xtts.* model, not just GPT)
     ckpt_file = find_best_checkpoint(checkpoint)
     if ckpt_file:
         console.print(f"  📂 Checkpoint: [dim]{ckpt_file}[/dim]")
         state = torch.load(ckpt_file, map_location="cpu")
         state = state.get("model", state)
-        cleaned = {}
-        for k, v in state.items():
-            key = k
-            for prefix in ("xtts.gpt.", "gpt."):
-                if k.startswith(prefix):
-                    key = k[len(prefix):]
-                    break
-            cleaned[key] = v
-        missing, unexpected = model.gpt.load_state_dict(cleaned, strict=False)
-        if missing:
-            console.print(f"  [dim yellow]⚠  {len(missing)} GPT keys not found in checkpoint[/dim yellow]")
+        # Strip "xtts." prefix to match Xtts model's own state_dict keys
+        xtts_state = {k[5:]: v for k, v in state.items() if k.startswith("xtts.")}
+        model.load_state_dict(xtts_state, strict=False)
+        # gpt_inference is the copy used during synthesis — sync it from the
+        # fine-tuned gpt weights (the checkpoint only saves gpt, not gpt_inference)
+        model.gpt.gpt_inference.load_state_dict(model.gpt.gpt.state_dict(), strict=False)
+        console.print(f"  ✅ Fine-tuned weights loaded and synced to gpt_inference")
     else:
         console.print("  [yellow]⚠  No fine-tune checkpoint found — using base XTTS-v2[/yellow]")
 
@@ -193,7 +191,11 @@ if __name__ == "__main__":
     with Progress(SpinnerColumn(), TextColumn("[cyan]{task.description}"),
                   console=console, transient=True) as prog:
         task = prog.add_task(f"Computing speaker conditioning …", total=None)
-        gpt_cond, spk_emb = model.get_conditioning_latents(audio_path=[ref_wav])
+        gpt_cond, spk_emb = model.get_conditioning_latents(
+            audio_path=[ref_wav],
+            gpt_cond_len=30,
+            max_ref_length=60,
+        )
         prog.update(task, description="Speaker conditioning ready ✅")
 
     # ── Synthesize ────────────────────────────────────────────────────────────
@@ -227,9 +229,9 @@ if __name__ == "__main__":
                     prog.update(task, description=f"chunk {len(chunks)}")
             except Exception as e:
                 console.print(f"  [yellow]Stream fallback to batch ({e})[/yellow]")
-                out = model.synthesize(processed, config,
-                                       speaker_wav=[ref_wav], language=args.language,
-                                       gpt_cond_len=3)
+                out = model.inference(processed, args.language,
+                                      gpt_cond_latent=gpt_cond, speaker_embedding=spk_emb,
+                                      temperature=0.65, repetition_penalty=10.0)
                 chunks = [np.array(out["wav"], dtype=np.float32)]
                 ttfa_ms = (time.perf_counter() - t_start) * 1000
         wav = np.concatenate(chunks) if chunks else np.zeros(1, np.float32)
@@ -237,9 +239,14 @@ if __name__ == "__main__":
         with Progress(SpinnerColumn(), TextColumn("[cyan]{task.description}"),
                       console=console, transient=True) as prog:
             task = prog.add_task("Synthesizing …", total=None)
-            out = model.synthesize(
-                processed, config,
-                speaker_wav=[ref_wav], language=args.language, gpt_cond_len=3,
+            out = model.inference(
+                processed, args.language,
+                gpt_cond_latent=gpt_cond,
+                speaker_embedding=spk_emb,
+                temperature=0.65,
+                repetition_penalty=10.0,
+                top_k=50,
+                top_p=0.85,
             )
             wav = np.array(out["wav"], dtype=np.float32)
             ttfa_ms = (time.perf_counter() - t_start) * 1000

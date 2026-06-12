@@ -1,0 +1,40 @@
+{
+  "os": "Linux-5.15.0-179-generic-x86_64-with-glibc2.35",
+  "python": "CPython 3.10.12",
+  "startedAt": "2026-06-11T18:21:58.799932Z",
+  "program": "/home/ai/saudi-tts-finetune/Leva-TTS/scripts/train.py",
+  "codePath": "scripts/train.py",
+  "codePathLocal": "scripts/train.py",
+  "git": {
+    "remote": "https://github.com/mohamed-rabee3/Leva-TTS.git",
+    "commit": "ff46fc4f39922e17fc4e52b58887b3ad6423da62"
+  },
+  "email": "mohamed.rabiee03@gmail.com",
+  "root": "/home/ai/saudi-tts-finetune/Leva-TTS",
+  "host": "ai",
+  "executable": "/home/ai/saudi-tts-finetune/.venv-train/bin/python3",
+  "cpu_count": 64,
+  "cpu_count_logical": 128,
+  "gpu": "NVIDIA RTX 5880 Ada Generation",
+  "gpu_count": 1,
+  "disk": {
+    "/": {
+      "total": "499694788608",
+      "used": "463763398656"
+    }
+  },
+  "memory": {
+    "total": "134756999168"
+  },
+  "gpu_nvidia": [
+    {
+      "name": "NVIDIA RTX 5880 Ada Generation",
+      "memoryTotal": "51527024640",
+      "cudaCores": 14080,
+      "architecture": "Ada",
+      "uuid": "GPU-ec93e7d9-d5b2-7b98-460c-23b175920b34"
+    }
+  ],
+  "cudaVersion": "13.1",
+  "writerId": "e2aflt9ppo1o7lx985anm3x6tez61v9s"
+}

@@ -1,0 +1,81 @@
+_wandb:
+    value:
+        cli_version: 0.27.2
+        e:
+            gselk09cpd97ex3c2kqbu8j91x4ljwzp:
+                codePath: scripts/train.py
+                codePathLocal: scripts/train.py
+                cpu_count: 64
+                cpu_count_logical: 128
+                cudaVersion: "13.1"
+                disk:
+                    /:
+                        total: "499694788608"
+                        used: "430063636480"
+                email: mohamed.rabiee03@gmail.com
+                executable: /home/ai/saudi-tts-finetune/.venv-train/bin/python3
+                git:
+                    commit: ff46fc4f39922e17fc4e52b58887b3ad6423da62
+                    remote: https://github.com/mohamed-rabee3/Leva-TTS.git
+                gpu: NVIDIA RTX 5880 Ada Generation
+                gpu_count: 1
+                gpu_nvidia:
+                    - architecture: Ada
+                      cudaCores: 14080
+                      memoryTotal: "51527024640"
+                      name: NVIDIA RTX 5880 Ada Generation
+                      uuid: GPU-ec93e7d9-d5b2-7b98-460c-23b175920b34
+                host: ai
+                memory:
+                    total: "134756999168"
+                os: Linux-5.15.0-179-generic-x86_64-with-glibc2.35
+                program: /home/ai/saudi-tts-finetune/Leva-TTS/scripts/train.py
+                python: CPython 3.10.12
+                root: /home/ai/saudi-tts-finetune/Leva-TTS
+                startedAt: "2026-06-11T17:22:55.588563Z"
+                writerId: gselk09cpd97ex3c2kqbu8j91x4ljwzp
+        m: []
+        python_version: 3.10.12
+        t:
+            "1":
+                - 1
+                - 5
+                - 11
+                - 47
+                - 49
+                - 53
+            "2":
+                - 1
+                - 5
+                - 11
+                - 47
+                - 49
+                - 53
+            "3":
+                - 13
+                - 16
+                - 61
+            "4": 3.10.12
+            "5": 0.27.2
+            "6": 4.57.6
+            "12": 0.27.2
+            "13": linux-x86_64
+batch_size:
+    value: 4
+datasets:
+    value:
+        - synthetic_saudi
+effective_batch:
+    value: 32
+epochs:
+    value: 30
+grad_accum_steps:
+    value: 8
+lr:
+    value: 5e-06
+lr_scheduler:
+    value: MultiStepLR
+optimizer:
+    value: AdamW
+sample_rate:
+    value: 22050

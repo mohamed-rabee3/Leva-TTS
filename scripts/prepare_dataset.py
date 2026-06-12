@@ -70,13 +70,15 @@ def step(label, fn):
         import traceback; traceback.print_exc()
 
 
-def prepare_synthetic(src_dir: str, proc_dir: Path):
+def prepare_synthetic(src_dir: str, proc_dir: Path, delete_source: bool = False):
     """
     Prepare the Lahgtna synthetic data.
 
     The WAVs are already 24 kHz, high quality. We resample them to 22050 Hz
     (XTTS-v2 native rate), apply loudness normalisation, and copy to proc_dir
     along with metadata.csv.
+
+    delete_source: delete each source WAV after processing to save disk space.
     """
     import csv
     import numpy as np
@@ -94,7 +96,6 @@ def prepare_synthetic(src_dir: str, proc_dir: Path):
 
     proc_dir.mkdir(parents=True, exist_ok=True)
 
-    # Read source metadata
     rows = []
     with open(meta_src, encoding="utf-8") as f:
         for row in csv.reader(f, delimiter="|"):
@@ -102,13 +103,14 @@ def prepare_synthetic(src_dir: str, proc_dir: Path):
                 rows.append((row[0], row[1]))
 
     logger.info(f"Synthetic source: {len(rows):,} entries in {meta_src}")
+    if delete_source:
+        logger.info("--delete-source enabled: source WAVs deleted after processing")
 
     TARGET_SR = 22_050
     out_rows  = []
     skip      = 0
 
     meta_out  = proc_dir / "metadata.csv"
-    # Skip rows already processed
     done = set()
     if meta_out.exists():
         with open(meta_out, encoding="utf-8") as f:
@@ -120,6 +122,10 @@ def prepare_synthetic(src_dir: str, proc_dir: Path):
 
         for wav_rel, text in tqdm(rows, desc="Synthetic (resample+norm)"):
             if wav_rel in done:
+                if delete_source:
+                    wav_src = src / wav_rel
+                    if wav_src.exists():
+                        wav_src.unlink()
                 continue
             wav_src = src / wav_rel
             if not wav_src.exists():
@@ -127,7 +133,6 @@ def prepare_synthetic(src_dir: str, proc_dir: Path):
 
             try:
                 wav, sr = librosa.load(str(wav_src), sr=TARGET_SR, mono=True)
-                # Loudness normalise
                 rms = np.sqrt(np.mean(wav ** 2))
                 if rms > 1e-9:
                     target_rms = 10 ** (-23.0 / 20.0)
@@ -143,6 +148,9 @@ def prepare_synthetic(src_dir: str, proc_dir: Path):
                 writer.writerow([wav_rel, text])
                 fout.flush()
                 out_rows.append((wav_rel, text))
+
+                if delete_source:
+                    wav_src.unlink()
             except Exception as e:
                 logger.debug(f"Skip {wav_src.name}: {e}")
                 skip += 1
@@ -151,36 +159,28 @@ def prepare_synthetic(src_dir: str, proc_dir: Path):
 
 
 if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--delete-source", action="store_true",
+                        help="Delete each source WAV after processing (saves ~14 GB disk)")
+    args = parser.parse_args()
+
     raw  = Path(RAW_DIR)
     proc = Path(PROC_DIR)
 
     if console:
         console.print(Panel(
-            "[bold cyan]⚙️  Leva-TTS  ·  Data Preparation (3 sources)[/bold cyan]\n"
-            f"[dim]1. LibriSpeech (cap {MAX_HOURS_EN:.0f} h) : {raw}/librispeech_hf[/dim]\n"
-            f"[dim]2. Lahgtna synthetic     : {SYNTHETIC_SRC}[/dim]",
+            "[bold cyan]⚙️  Leva-TTS  ·  Data Preparation[/bold cyan]\n"
+            f"[dim]Lahgtna synthetic: {SYNTHETIC_SRC}[/dim]"
+            + ("\n[bold red]--delete-source: raw WAVs will be deleted as processed[/bold red]"
+               if args.delete_source else ""),
             border_style="cyan", padding=(1, 4),
         ))
 
-    from leva_tts.data.download import download_librispeech
-
-    from leva_tts.data.preprocess import process_librispeech
-
-    # ── Source 1: LibriSpeech English ─────────────────────────────────────────
-    if not SKIP_DOWNLOAD:
-        step("⬇️  Download LibriSpeech train-clean-100",
-             lambda: download_librispeech(raw))
-
-    step(f"⚙️  Preprocess LibriSpeech → 22 kHz  (cap {MAX_HOURS_EN:.0f} h)",
-         lambda: process_librispeech(
-             raw / "librispeech_hf",
-             proc / "librispeech",
-             max_hours=MAX_HOURS_EN,
-         ))
-
-    # ── Source 2: Lahgtna synthetic ───────────────────────────────────────────
+    # ── Lahgtna synthetic ─────────────────────────────────────────────────────
     step("⚙️  Prepare Lahgtna synthetic → 22 kHz + normalise",
-         lambda: prepare_synthetic(SYNTHETIC_SRC, proc / "synthetic"))
+         lambda: prepare_synthetic(SYNTHETIC_SRC, proc / "synthetic",
+                                   delete_source=args.delete_source))
 
     if console:
         console.print("\n[bold green]🎉  All 2 sources prepared.[/bold green]\n")
