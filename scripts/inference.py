@@ -78,10 +78,12 @@ def find_best_checkpoint(ckpt_dir: str) -> str | None:
     if p.is_file():
         return str(p)
     # Prefer best_model.pth or best_model_<step>.pth
-    bests = sorted(p.rglob("best_model*.pth"), key=lambda f: f.stat().st_mtime)
+    bests = sorted((f for f in p.rglob("best_model*.pth") if f.exists()),
+                   key=lambda f: f.stat().st_mtime)
     if bests:
         return str(bests[-1])
-    pths = sorted(p.rglob("*.pth"), key=lambda f: f.stat().st_mtime)
+    pths = sorted((f for f in p.rglob("*.pth") if f.exists()),
+                  key=lambda f: f.stat().st_mtime)
     return str(pths[-1]) if pths else None
 
 
@@ -138,6 +140,7 @@ if __name__ == "__main__":
     ap.add_argument("--language",   default=LANGUAGE,          help="'ar' or 'en'")
     ap.add_argument("--out",        default=DEFAULT_OUTPUT,    help="Output WAV path")
     ap.add_argument("--stream",     action="store_true",       help="Streaming synthesis")
+    ap.add_argument("--speed",      type=float, default=1.0,  help="Speech speed (0.8=slow, 1.0=normal, 1.2=fast)")
     ap.add_argument("--checkpoint", default=DEFAULT_CHECKPOINT)
     ap.add_argument("--device",     default=DEVICE)
     ap.add_argument("--verbose-text", action="store_true",     help="Show text pipeline stages")
@@ -177,6 +180,8 @@ if __name__ == "__main__":
         console.print(f"  ✨ Processed: [green]{processed[:80]}[/green]")
     console.print(f"  🌐 Language : {args.language}")
     console.print(f"  🎵 Mode     : {'Streaming' if args.stream else 'Batch'}")
+    if args.speed != 1.0:
+        console.print(f"  🐢 Speed    : {args.speed}x")
     console.print()
 
     # ── Load model ────────────────────────────────────────────────────────────
@@ -250,6 +255,10 @@ if __name__ == "__main__":
             )
             wav = np.array(out["wav"], dtype=np.float32)
             ttfa_ms = (time.perf_counter() - t_start) * 1000
+
+    if args.speed != 1.0:
+        import librosa
+        wav = librosa.effects.time_stretch(wav, rate=args.speed)
 
     wall    = time.perf_counter() - t_start
     dur     = len(wav) / 24000
