@@ -4,7 +4,7 @@ Generate synthetic Saudi Arabic audio using Lahgtna-OmniVoice.
 Model : oddadmix/lahgtna-omnivoice-v2
 Repo  : https://github.com/Oddadmix/Lahgtna-OmniVoice
 
-Single-speaker setup: all 50K sentences are voiced by "hoda"
+Single-speaker setup: all 100K sentences are voiced by "hoda"
 (reference_audios/hoda.wav) in Najdi/Saudi Arabic (ISO 639-3: ars,
 203 h in the OmniVoice training mix — the best-covered Saudi variety).
 
@@ -25,24 +25,32 @@ Output (on HuggingFace)
 # ╔══════════════════════════════════════════════════════════════════════════╗
 #                            CONFIGURATION
 # ╚══════════════════════════════════════════════════════════════════════════╝
-SENTENCES_FILE        = "data/saudi_50k.txt"
+SENTENCES_FILE        = "data/saudi_200k.txt"
 REFERENCES_JSON       = "reference_audios/references.json"
 OUTPUT_DIR            = "data/synthetic_data"
 
 MODEL_ID              = "Rabe3/lahgtna-omnivoice-v2"   # mirror of oddadmix/lahgtna-omnivoice-v2
 LANGUAGE              = "ars"          # Najdi (Saudi) Arabic; acw = Hijazi
 GPUS                  = "0"            # comma-separated GPU IDs to use in parallel
-SENTENCES_PER_SPEAKER = 50_000         # 1 speaker (hoda) × 50 000 = 50 000 total
+WORKERS_PER_GPU       = 10             # parallel OmniVoice instances per GPU (throughput ↑)
+SENTENCES_PER_SPEAKER = 200_000        # 1 speaker (hoda) × 200 000 = 200 000 total
 
 RESUME                = True            # skip already-generated WAVs
 
-# HuggingFace streaming upload — WAVs are deleted locally after each batch
-HF_DATASET_REPO       = "Rabe3/saudi-tts-synthetic"   # dataset repo (created if absent)
-UPLOAD_BATCH_SIZE     = 500            # upload + delete every N WAVs (~100-150 MB/batch)
+# HuggingFace upload — WAVs are KEPT locally (never deleted) and ALSO pushed to
+# HF every UPLOAD_BATCH_SIZE generated WAVs.
+HF_DATASET_REPO       = "Rabe3/saudi-tts-synthetic-200k"   # dataset repo (created if absent)
+UPLOAD_BATCH_SIZE     = 10_000          # push to HF every N new WAVs (kept locally regardless)
+
+# Qwen3-TTS training format: one JSONL line per utterance:
+#   {"audio": "wavs/<spk>/<file>.wav", "text": "<transcript>", "ref_audio": "ref/<spk>.wav"}
+# Same ref_audio for all samples (single speaker) — recommended by Qwen3-TTS.
+JSONL_NAME            = "train_raw.jsonl"
+REF_DIR               = "ref"           # reference audio copied here (local + repo)
 # ╚══════════════════════════════════════════════════════════════════════════╝
 
-import csv
 import json
+import shutil
 import sys
 import time
 from pathlib import Path
@@ -95,55 +103,92 @@ def chunk_speakers(references: list, n_gpus: int) -> list:
     return chunks
 
 
-def merge_metadata(gpu_ids: list, out_dir: Path):
+def merge_metadata(out_dir: Path):
     """
-    Merge per-GPU metadata files into a single metadata.csv.
-    Existing entries are preserved (resume support).
+    Merge ALL per-worker JSONL parts (metadata_*.jsonl, incl. legacy metadata_gpu*)
+    into a single Qwen3-TTS train_raw.jsonl. Existing entries preserved; parts kept.
     """
-    meta_path = out_dir / "metadata.csv"
-    # Load existing entries
+    meta_path = out_dir / JSONL_NAME
     existing = set()
     if meta_path.exists():
         with open(meta_path, encoding="utf-8") as f:
-            for row in csv.reader(f, delimiter="|"):
-                if row:
-                    existing.add(row[0])
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    existing.add(json.loads(line)["audio"])
+                except Exception:
+                    continue
 
-    new_rows = []
-    for gpu_id in gpu_ids:
-        part_path = out_dir / f"metadata_gpu{gpu_id}.csv"
-        if not part_path.exists():
-            continue
+    new_lines = []
+    for part_path in sorted(out_dir.glob("metadata_*.jsonl")):
         with open(part_path, encoding="utf-8") as f:
-            for row in csv.reader(f, delimiter="|"):
-                if len(row) >= 2 and row[0] not in existing:
-                    new_rows.append(row)
-                    existing.add(row[0])
-        part_path.unlink()   # clean up
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    audio = json.loads(line)["audio"]
+                except Exception:
+                    continue
+                if audio not in existing:
+                    new_lines.append(line)
+                    existing.add(audio)
 
-    if new_rows:
-        with open(meta_path, "a", newline="", encoding="utf-8") as f:
-            w = csv.writer(f, delimiter="|")
-            for row in new_rows:
-                w.writerow(row)
+    if new_lines:
+        with open(meta_path, "a", encoding="utf-8") as f:
+            for line in new_lines:
+                f.write(line + "\n")
 
     total = len(existing)
-    print(f"[MERGE] metadata.csv → {total:,} total entries")
+    print(f"[MERGE] {JSONL_NAME} → {total:,} total entries")
     return total
 
 
 # ── HuggingFace upload helper ─────────────────────────────────────────────────
 
 def hf_ensure_repo(api: HfApi, repo_id: str):
+    # exist_ok=True is race-safe when multiple workers call this concurrently.
     try:
-        api.repo_info(repo_id=repo_id, repo_type="dataset")
-    except Exception:
-        api.create_repo(repo_id=repo_id, repo_type="dataset", private=False)
-        print(f"[HF] Created dataset repo: {repo_id}")
+        api.create_repo(repo_id=repo_id, repo_type="dataset", private=False, exist_ok=True)
+    except Exception as exc:
+        print(f"[HF] ensure_repo note: {str(exc)[:100]}")
 
 
-def hf_upload_and_purge(batch: list, api: HfApi, repo_id: str, gpu_id: int):
-    """Upload a list of (wav_abs, path_in_repo) tuples to HF, then delete locally."""
+def hf_upload_reference(api: HfApi, repo_id: str, ref_abs: Path, repo_path: str):
+    """Upload the speaker reference audio once so ref_audio paths resolve on HF."""
+    try:
+        api.upload_file(
+            path_or_fileobj=str(ref_abs),
+            path_in_repo=repo_path,
+            repo_id=repo_id,
+            repo_type="dataset",
+            commit_message=f"Add reference audio {repo_path}",
+        )
+        print(f"[HF] Uploaded reference → {repo_id}/{repo_path}")
+    except Exception as exc:
+        print(f"[HF] WARN reference upload failed: {str(exc)[:100]}")
+
+
+def hf_upload_metadata(api: HfApi, repo_id: str, part_path: Path, gpu_id: int):
+    """Push this GPU's partial Qwen3-TTS JSONL to HF (intermediate visibility)."""
+    if not part_path.exists():
+        return
+    try:
+        api.upload_file(
+            path_or_fileobj=str(part_path),
+            path_in_repo=part_path.name,
+            repo_id=repo_id,
+            repo_type="dataset",
+            commit_message=f"Update metadata {part_path.name}",
+        )
+    except Exception as exc:
+        tqdm.write(f"[GPU {gpu_id}] WARN metadata upload failed: {str(exc)[:80]}")
+
+
+def hf_upload(batch: list, api: HfApi, repo_id: str, gpu_id: int):
+    """Upload a list of (wav_abs, path_in_repo) tuples to HF. Files are KEPT locally."""
     if not batch:
         return
     operations = [
@@ -157,159 +202,151 @@ def hf_upload_and_purge(batch: list, api: HfApi, repo_id: str, gpu_id: int):
             operations=operations,
             commit_message=f"Add {len(batch)} WAVs (GPU {gpu_id})",
         )
-        for wav_abs, _ in batch:
-            wav_abs.unlink(missing_ok=True)
-        tqdm.write(f"[GPU {gpu_id}] ↑ Uploaded & purged {len(batch)} WAVs → {repo_id}")
+        tqdm.write(f"[GPU {gpu_id}] ↑ Uploaded {len(batch)} WAVs → {repo_id} (kept locally)")
     except Exception as exc:
-        tqdm.write(f"[GPU {gpu_id}] WARN upload failed ({str(exc)[:100]}) — WAVs kept locally")
+        tqdm.write(f"[GPU {gpu_id}] WARN upload failed ({str(exc)[:100]}) — WAVs kept locally, will retry next batch")
 
 
 # ── Per-GPU worker (runs in its own process) ──────────────────────────────────
 
-def generate_for_gpu(
+def generate_worker(
+    worker_id:    int,
     gpu_id:       int,
-    spk_chunk:    list,   # [(global_spk_idx, ref_dict), ...]
+    shard:        list,   # global sentence indices this worker handles
     sentences:    list,
-    per_spk:      int,
+    ref:          dict,   # single-speaker reference dict
     out_dir_str:  str,
 ):
     """
-    Load the model on cuda:{gpu_id} and generate all speakers in spk_chunk.
-    Writes per-GPU metadata to metadata_gpu{gpu_id}.csv.
+    One OmniVoice instance on cuda:{gpu_id} generating its sentence shard.
+    Multiple workers may share a GPU. Writes metadata_w{worker_id}.jsonl
+    (Qwen3-TTS format). WAVs are kept locally and pushed to HF every
+    UPLOAD_BATCH_SIZE; a final folder sync in main guarantees completeness.
     """
     device  = f"cuda:{gpu_id}"
     out_dir = Path(out_dir_str)
+    tag     = f"W{worker_id}@gpu{gpu_id}"
 
-    print(f"\n[GPU {gpu_id}] Loading {MODEL_ID} on {device} …")
+    print(f"\n[{tag}] Loading {MODEL_ID} on {device} … ({len(shard):,} sentences)")
     try:
         from omnivoice import OmniVoice
     except ImportError:
-        print(f"[GPU {gpu_id}] omnivoice not installed. "
+        print(f"[{tag}] omnivoice not installed. "
               "Run: pip install git+https://github.com/Oddadmix/Lahgtna-OmniVoice.git")
         return
 
     model = OmniVoice.from_pretrained(MODEL_ID, device_map=device, dtype=torch.float16)
     SR    = model.sampling_rate
-    print(f"[GPU {gpu_id}] Model ready (SR={SR} Hz) — "
-          f"handling {len(spk_chunk)} speaker(s): "
-          f"{[r['speaker_id'] for _, r in spk_chunk]}")
+    print(f"[{tag}] Model ready (SR={SR} Hz)")
 
     api = HfApi()
-    hf_ensure_repo(api, HF_DATASET_REPO)
-    upload_buffer: list = []   # [(wav_abs, path_in_repo), ...]
+    hf_ensure_repo(api, HF_DATASET_REPO)   # idempotent (exist_ok)
+    upload_buffer: list = []
 
-    # Per-GPU metadata file (avoids write conflicts between processes)
-    part_meta_path = out_dir / f"metadata_gpu{gpu_id}.csv"
-    # Load already-done entries from both the main meta and this GPU's partial meta
+    spk_id   = ref["speaker_id"]
+    ref_path = ref["audio_path"]
+    ref_text = ref.get("reference_text", "")
+    wav_dir  = out_dir / "wavs" / spk_id
+    wav_dir.mkdir(parents=True, exist_ok=True)
+
+    ref_rel   = f"{REF_DIR}/{spk_id}.wav"
+    ref_local = out_dir / REF_DIR / f"{spk_id}.wav"
+    if worker_id == 0:   # only one worker manages the shared reference
+        ref_local.parent.mkdir(parents=True, exist_ok=True)
+        if not ref_local.exists() and Path(ref_path).exists():
+            shutil.copyfile(ref_path, ref_local)
+            hf_upload_reference(api, HF_DATASET_REPO, ref_local, ref_rel)
+
+    part_meta_path = out_dir / f"metadata_w{worker_id}.jsonl"
+    # Resume: skip anything already in the merged meta OR any worker's part file.
     done: set = set()
-    main_meta = out_dir / "metadata.csv"
-    for mp in [main_meta, part_meta_path]:
+    for mp in [out_dir / JSONL_NAME, *out_dir.glob("metadata_*.jsonl")]:
         if mp.exists():
             with open(mp, encoding="utf-8") as f:
-                for row in csv.reader(f, delimiter="|"):
-                    if row:
-                        done.add(row[0])
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        done.add(json.loads(line)["audio"])
+                    except Exception:
+                        continue
 
-    fh  = open(part_meta_path, "a", newline="", encoding="utf-8")
-    writer = csv.writer(fh, delimiter="|")
+    fh = open(part_meta_path, "a", encoding="utf-8")
 
-    gpu_generated = 0
-    gpu_errors    = 0
-    gpu_start     = time.perf_counter()
+    def write_meta(audio_rel: str, transcript: str):
+        fh.write(json.dumps(
+            {"audio": audio_rel, "text": transcript, "ref_audio": ref_rel},
+            ensure_ascii=False) + "\n")
+        fh.flush()
 
-    for spk_idx, (global_spk_idx, ref) in enumerate(spk_chunk):
-        spk_id   = ref["speaker_id"]
-        ref_path = ref["audio_path"]
-        ref_text = ref.get("reference_text", "")
-        wav_dir  = out_dir / "wavs" / spk_id
-        wav_dir.mkdir(parents=True, exist_ok=True)
-
-        # Sentences for this speaker (same assignment as single-GPU version)
-        start = global_spk_idx * per_spk
-        end   = start + per_spk
-        sents = sentences[start:end]
-
-        # Build todo list
-        todo = []
-        for i, text in enumerate(sents):
-            g_idx   = start + i
-            wav_name = f"{spk_id}_{g_idx:07d}.wav"
-            wav_rel  = f"wavs/{spk_id}/{wav_name}"
-            wav_abs  = wav_dir / wav_name
-            if RESUME and wav_rel in done:
-                continue
-            if RESUME and wav_abs.exists():
-                writer.writerow([wav_rel, text])
-                fh.flush()
-                done.add(wav_rel)
-                continue
-            todo.append((g_idx, text, wav_rel, wav_abs))
-
-        already = len(sents) - len(todo)
-        print(f"[GPU {gpu_id}] Speaker {spk_idx+1}/{len(spk_chunk)} "
-              f"[{spk_id}]  {len(todo):,} to generate  ({already:,} done)")
-
-        if not todo:
-            print(f"[GPU {gpu_id}] → All done, skipping.")
+    # Build todo from this worker's shard
+    todo = []
+    for g_idx in shard:
+        text     = sentences[g_idx]
+        wav_name = f"{spk_id}_{g_idx:07d}.wav"
+        wav_rel  = f"wavs/{spk_id}/{wav_name}"
+        wav_abs  = wav_dir / wav_name
+        if RESUME and wav_rel in done:
             continue
+        if RESUME and wav_abs.exists():
+            write_meta(wav_rel, text)
+            done.add(wav_rel)
+            continue
+        todo.append((g_idx, text, wav_rel, wav_abs))
 
-        gen, err  = 0, 0
-        spk_start = time.perf_counter()
+    already = len(shard) - len(todo)
+    print(f"[{tag}] {len(todo):,} to generate  ({already:,} already done)")
 
-        with tqdm(
-            total    = len(todo),
-            desc     = f"  GPU{gpu_id} {spk_id}",
-            unit     = "utt",
-            position = gpu_id,        # separate tqdm line per GPU
-            leave    = True,
-            dynamic_ncols = True,
-            bar_format = "{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}]",
-        ) as pbar:
-            for g_idx, text, wav_rel, wav_abs in todo:
-                try:
-                    audio = model.generate(
-                        text              = text,
-                        ref_audio         = ref_path,
-                        ref_text          = ref_text if ref_text else None,
-                        language          = LANGUAGE,
-                        repetition_penalty = 1.2,
-                        top_p             = 0.7,
-                        temperature       = 0.7,
-                    )
-                    sf.write(str(wav_abs), audio[0], SR)
-                    writer.writerow([wav_rel, text])
-                    fh.flush()
-                    done.add(wav_rel)
-                    upload_buffer.append((wav_abs, wav_rel))
-                    gen += 1
+    gen, err = 0, 0
+    t0 = time.perf_counter()
+    with tqdm(
+        total    = len(todo),
+        desc     = f"  {tag}",
+        unit     = "utt",
+        position = worker_id,
+        leave    = True,
+        dynamic_ncols = True,
+        bar_format = "{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}]",
+    ) as pbar:
+        for g_idx, text, wav_rel, wav_abs in todo:
+            try:
+                audio = model.generate(
+                    text              = text,
+                    ref_audio         = ref_path,
+                    ref_text          = ref_text if ref_text else None,
+                    language          = LANGUAGE,
+                    repetition_penalty = 1.2,
+                    top_p             = 0.7,
+                    temperature       = 0.7,
+                )
+                sf.write(str(wav_abs), audio[0], SR)
+                write_meta(wav_rel, text)
+                done.add(wav_rel)
+                upload_buffer.append((wav_abs, wav_rel))
+                gen += 1
 
-                    if len(upload_buffer) >= UPLOAD_BATCH_SIZE:
-                        hf_upload_and_purge(upload_buffer, api, HF_DATASET_REPO, gpu_id)
-                        upload_buffer.clear()
-                except Exception as exc:
-                    tqdm.write(f"[GPU {gpu_id}] WARN idx={g_idx}  {str(exc)[:80]}")
-                    err += 1
+                if len(upload_buffer) >= UPLOAD_BATCH_SIZE:
+                    hf_upload(upload_buffer, api, HF_DATASET_REPO, worker_id)
+                    hf_upload_metadata(api, HF_DATASET_REPO, part_meta_path, worker_id)
+                    upload_buffer.clear()
+            except Exception as exc:
+                tqdm.write(f"[{tag}] WARN idx={g_idx}  {str(exc)[:80]}")
+                err += 1
 
-                pbar.set_postfix(gen=gen, err=err)
-                pbar.update(1)
+            pbar.set_postfix(gen=gen, err=err)
+            pbar.update(1)
 
-        spk_elapsed = time.perf_counter() - spk_start
-        rate = gen / max(spk_elapsed, 1)
-        print(f"[GPU {gpu_id}] → {spk_id}: {gen:,} generated | "
-              f"{err} errors | {rate:.1f} utt/s | {spk_elapsed/60:.1f} min")
-        gpu_generated += gen
-        gpu_errors    += err
-
-    # Flush any remaining WAVs that didn't fill a full batch
     if upload_buffer:
-        hf_upload_and_purge(upload_buffer, api, HF_DATASET_REPO, gpu_id)
+        hf_upload(upload_buffer, api, HF_DATASET_REPO, worker_id)
         upload_buffer.clear()
+    hf_upload_metadata(api, HF_DATASET_REPO, part_meta_path, worker_id)
 
     fh.close()
-    gpu_elapsed = time.perf_counter() - gpu_start
-    print(f"\n[GPU {gpu_id}] FINISHED — "
-          f"{gpu_generated:,} generated | {gpu_errors} errors | "
-          f"{gpu_elapsed/60:.1f} min total")
+    elapsed = time.perf_counter() - t0
+    rate = gen / max(elapsed, 1)
+    print(f"\n[{tag}] FINISHED — {gen:,} generated | {err} errors | "
+          f"{rate:.2f} utt/s | {elapsed/60:.1f} min")
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────
@@ -324,8 +361,8 @@ if __name__ == "__main__":
     gpu_ids = [int(g.strip()) for g in GPUS.split(",") if g.strip()]
     n_gpus  = len(gpu_ids)
     print(f"\n{'='*60}")
-    print(f"  Lahgtna-OmniVoice  ·  Multi-GPU Generation")
-    print(f"  GPUs        : {gpu_ids}")
+    print(f"  Lahgtna-OmniVoice  ·  Multi-Worker Generation")
+    print(f"  GPUs        : {gpu_ids}  × {WORKERS_PER_GPU} workers each")
     print(f"  Model       : {MODEL_ID}")
     print(f"  Sentences   : {SENTENCES_FILE}")
     print(f"  Output      : {OUTPUT_DIR}")
@@ -334,65 +371,78 @@ if __name__ == "__main__":
     # 2. Load shared data (sentences + references)
     sentences  = load_sentences(SENTENCES_FILE)
     references = load_references(REFERENCES_JSON)
-    n_spk      = len(references)
+    if len(references) > 1:
+        print(f"[WARN] {len(references)} speakers in references.json — this multi-worker "
+              f"build is single-speaker; using only '{references[0]['speaker_id']}'.")
+    ref = references[0]
 
-    per_spk = SENTENCES_PER_SPEAKER
-    if len(sentences) < n_spk * per_spk:
-        per_spk = len(sentences) // n_spk
-        print(f"[WARN] Sentences short — reduced to {per_spk:,}/speaker")
+    N = min(len(sentences), SENTENCES_PER_SPEAKER)
+    total_workers = n_gpus * WORKERS_PER_GPU
 
-    print(f"\n  {n_spk} speakers  ÷  {n_gpus} GPUs")
-
-    # 3. Chunk speakers across GPUs
-    chunks = chunk_speakers(references, n_gpus)
-    for i, (gid, chunk) in enumerate(zip(gpu_ids, chunks)):
-        spk_names = [r["speaker_id"] for _, r in chunk]
-        print(f"  GPU {gid}: {len(chunk)} speaker(s) → {spk_names}")
+    # 3. Shard sentence indices across all workers (strided → balanced resume)
+    shards = [list(range(k, N, total_workers)) for k in range(total_workers)]
+    print(f"\n  {N:,} sentences  ·  speaker '{ref['speaker_id']}'  ·  "
+          f"{total_workers} workers ({n_gpus} GPU × {WORKERS_PER_GPU})")
 
     Path(OUTPUT_DIR).mkdir(parents=True, exist_ok=True)
     wall_start = time.perf_counter()
 
-    # 4. Launch one process per GPU (all run simultaneously)
-    print(f"\n  Launching {n_gpus} parallel processes …\n")
+    # 4. Launch one process per worker (workers_per_gpu share each GPU)
+    print(f"\n  Launching {total_workers} worker processes …\n")
     processes = []
-    for gpu_id, spk_chunk in zip(gpu_ids, chunks):
+    for k in range(total_workers):
+        gpu_id = gpu_ids[k // WORKERS_PER_GPU]
         p = mp.Process(
-            target = generate_for_gpu,
-            args   = (gpu_id, spk_chunk, sentences, per_spk, OUTPUT_DIR),
-            name   = f"GPU-{gpu_id}",
+            target = generate_worker,
+            args   = (k, gpu_id, shards[k], sentences, ref, OUTPUT_DIR),
+            name   = f"W{k}",
         )
         p.start()
         processes.append(p)
-        print(f"  ▶ Started process for GPU {gpu_id}  (PID {p.pid})")
+        print(f"  ▶ Started worker {k} on GPU {gpu_id}  (PID {p.pid}, {len(shards[k]):,} sents)")
 
-    # 5. Wait for all GPUs to finish
-    print(f"\n  Waiting for all GPUs to complete …")
+    # 5. Wait for all workers to finish
+    print(f"\n  Waiting for all {total_workers} workers to complete …")
     for p in processes:
         p.join()
         status = "✅ OK" if p.exitcode == 0 else f"❌ exited {p.exitcode}"
         print(f"  {p.name}: {status}")
 
-    # 6. Merge per-GPU metadata files → metadata.csv
+    # 6. Merge per-worker JSONL files → train_raw.jsonl (Qwen3-TTS format)
     print()
     out_dir = Path(OUTPUT_DIR)
-    total   = merge_metadata(gpu_ids, out_dir)
+    total   = merge_metadata(out_dir)
+
+    # 6b. Final folder sync — guarantees every local WAV is on HF even if some
+    # mid-run batch commits raced/failed across workers.
+    try:
+        api = HfApi()
+        if hasattr(api, "upload_large_folder"):
+            api.upload_large_folder(repo_id=HF_DATASET_REPO, repo_type="dataset",
+                                    folder_path=str(out_dir))
+        else:
+            api.upload_folder(repo_id=HF_DATASET_REPO, repo_type="dataset",
+                              folder_path=str(out_dir))
+        print(f"  Final folder sync → {HF_DATASET_REPO}")
+    except Exception as exc:
+        print(f"  WARN final folder sync failed: {str(exc)[:120]}")
 
     wall_elapsed = time.perf_counter() - wall_start
     dur_est      = total * 5 / 3600
 
-    # Upload final metadata.csv to HF
-    meta_path = out_dir / "metadata.csv"
+    # Upload final train_raw.jsonl to HF
+    meta_path = out_dir / JSONL_NAME
     if meta_path.exists():
         try:
             api = HfApi()
             api.upload_file(
                 path_or_fileobj=str(meta_path),
-                path_in_repo="metadata.csv",
+                path_in_repo=JSONL_NAME,
                 repo_id=HF_DATASET_REPO,
                 repo_type="dataset",
-                commit_message="Final metadata.csv",
+                commit_message=f"Final {JSONL_NAME}",
             )
-            print(f"  Metadata uploaded → {HF_DATASET_REPO}/metadata.csv")
+            print(f"  Metadata uploaded → {HF_DATASET_REPO}/{JSONL_NAME}")
         except Exception as exc:
             print(f"  WARN metadata upload failed: {exc}")
 
@@ -401,6 +451,7 @@ if __name__ == "__main__":
     print(f"  Total utterances : {total:,}")
     print(f"  Wall time        : {wall_elapsed/60:.1f} min")
     print(f"  ~Audio duration  : {dur_est:.1f} h  (est. 5 s avg)")
-    print(f"  Metadata         : {out_dir}/metadata.csv")
+    print(f"  Metadata (Qwen3) : {out_dir}/{JSONL_NAME}")
+    print(f"  Local WAVs       : {out_dir}/wavs/  (kept, not deleted)")
     print(f"  HF dataset       : https://huggingface.co/datasets/{HF_DATASET_REPO}")
     print(f"{'='*60}\n")

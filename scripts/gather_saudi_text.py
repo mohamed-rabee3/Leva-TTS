@@ -1,5 +1,5 @@
 """
-Gather 50,000 Saudi Arabic sentences for OmniVoice synthesis.
+Gather 100,000 Saudi Arabic sentences for OmniVoice synthesis.
 
 Sources
 -------
@@ -21,7 +21,7 @@ Distribution: ~60% pure Saudi (SDC), ~28% code-switching, ~12% numbers
 
 Output
 ------
-  data/saudi_50k.txt   — one sentence per line, partial diacritics from the
+  data/saudi_100k.txt  — one sentence per line, partial diacritics from the
                          Saudi lexicon CSV (same overrides as inference)
 
 Usage
@@ -34,11 +34,11 @@ Requirements: urllib (built-in), rich (optional)
 # ╔═══════════════════════════════════════════════════════════════════╗
 #                          CONFIGURATION
 # ╚═══════════════════════════════════════════════════════════════════╝
-TARGET       = 50_000
+TARGET       = 100_000
 PURE_RATIO   = 0.60          # fraction from SDC corpus
 CS_RATIO     = 0.28          # code-switching templates
 NUM_RATIO    = 0.12          # number-bearing sentences
-OUTPUT_FILE  = "data/saudi_50k.txt"
+OUTPUT_FILE  = "data/saudi_100k.txt"
 SDC_LOCAL    = "data/SDC.txt"
 SDC_URL      = "https://raw.githubusercontent.com/TaghreedT/SDC/main/SDC.txt"
 LEXICON_CSV  = "data/levantine_lexicon.csv"   # Saudi lexicon (kept filename)

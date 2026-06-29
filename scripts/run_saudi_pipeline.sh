@@ -6,7 +6,8 @@
 #   setsid nohup bash scripts/run_saudi_pipeline.sh > pipeline.log 2>&1 &
 set -u
 cd "$(dirname "$0")/.."
-PY=/home/ai/saudi-tts-finetune/.venv-train/bin/python
+PY="${PYTHON:-$(dirname "$0")/../.venv/bin/python}"
+if [ ! -x "$PY" ]; then PY=python3; fi
 
 ts() { date "+%F %T"; }
 
@@ -17,12 +18,12 @@ while pgrep -f "scripts/generate_lahgetna_data.py" > /dev/null; do
     sleep 120
 done
 
-# Sanity: require ≥95% of the 50K utterances before proceeding
+# Sanity: require ≥95% of the 100K utterances before proceeding
 N=$(wc -l < data/synthetic_data/metadata.csv 2>/dev/null || echo 0)
 N=$((N + $(wc -l < data/synthetic_data/metadata_gpu0.csv 2>/dev/null || echo 0)))
 echo "[$(ts)] Generation stopped. metadata rows: $N"
-if [ "$N" -lt 47500 ]; then
-    echo "[$(ts)] ❌ Only $N/49998 utterances generated — generation died early."
+if [ "$N" -lt 95000 ]; then
+    echo "[$(ts)] ❌ Only $N/99998 utterances generated — generation died early."
     echo "          Restart it (python3 scripts/generate_lahgetna_data.py resumes),"
     echo "          then re-run this script."
     exit 1
@@ -43,7 +44,7 @@ $PY scripts/prepare_dataset.py || { echo "[$(ts)] ❌ prepare_dataset failed"; e
 
 ROWS=$(wc -l < data/processed/synthetic/metadata.csv 2>/dev/null || echo 0)
 echo "[$(ts)] Processed synthetic rows: $ROWS"
-if [ "$ROWS" -lt 45000 ]; then
+if [ "$ROWS" -lt 90000 ]; then
     echo "[$(ts)] ❌ Too few processed rows ($ROWS) — aborting before training."
     exit 1
 fi
